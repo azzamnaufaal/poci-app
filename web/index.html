@@ -85,14 +85,9 @@
     </button>
     <div class="section-head">
       <h2>Koleksiku</h2>
-      <span class="sort-label">Terbaru</span>
+      <button class="link-btn" id="btn-home-see-library">Lihat semua</button>
     </div>
     <div id="home-collections" class="folder-grid"></div>
-    <div class="section-head">
-      <h2>Simpanan Terbaru</h2>
-      <button class="link-btn" id="btn-see-library">Lihat semua</button>
-    </div>
-    <div id="home-recent" class="item-grid"></div>
   </section>
 
   <section id="screen-library" class="screen app-screen" hidden>
@@ -114,38 +109,66 @@
   </section>
 
   <section id="screen-search" class="screen app-screen" hidden>
-    <header class="sub-top">
-      <button class="btn-square" data-nav="home" aria-label="Kembali">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="19" y1="12" x2="5" y2="12"/>
-          <polyline points="12 19 5 12 12 5"/>
-        </svg>
-      </button>
-      <h2>Cari Simpanan</h2>
+    <header class="search-top">
+      <div class="search-input-wrap">
+        <span class="search-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </span>
+        <input id="search-input" type="search" placeholder="Cari koleksi atau simpanan..." autocomplete="off">
+      </div>
+      <button class="link-btn search-cancel-btn" id="btn-search-cancel">Batal</button>
     </header>
-    <form id="search-form" class="search-bar">
-      <input id="search-input" type="search" placeholder="Ketik kata kunci...">
-      <button class="btn-primary" type="submit">Cari</button>
-    </form>
     <div class="scroll-area">
-      <div id="search-results" class="item-grid"></div>
+      <div id="search-initial" class="search-initial">
+        <div class="stats-panel search-stats-panel" id="search-stats-panel"></div>
+        <div class="section-head" style="margin-top:20px">
+          <h2>Terakhir Disimpan</h2>
+        </div>
+        <div id="search-recent-items" class="item-grid"></div>
+        <div class="section-head" style="margin-top:20px">
+          <h2>Tag Populer</h2>
+        </div>
+        <div id="search-popular-tags" class="tag-cloud"></div>
+      </div>
+      <div id="search-results" class="item-grid" hidden></div>
     </div>
   </section>
 
   <section id="screen-detail" class="screen app-screen" hidden></section>
 
   <section id="screen-collection" class="screen app-screen" hidden>
-    <header class="sub-top">
+    <header class="sub-top collection-header">
       <button class="btn-square" data-nav="home" aria-label="Kembali">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="19" y1="12" x2="5" y2="12"/>
           <polyline points="12 19 5 12 12 5"/>
         </svg>
       </button>
-      <h2 id="collection-title">Koleksi</h2>
+      <div class="collection-header-center">
+        <h2 id="collection-title">Koleksi</h2>
+        <span id="collection-count" class="collection-header-sub">0 item</span>
+      </div>
+      <div class="collection-header-actions">
+        <button class="btn-square btn-yellow" id="btn-collection-swipe" aria-label="Mode Geser">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="7" width="16" height="14" rx="2"/>
+            <path d="M6 3h14a2 2 0 0 1 2 2v14"/>
+          </svg>
+        </button>
+        <button class="btn-square" id="btn-collection-menu" aria-label="Menu Koleksi">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+          </svg>
+        </button>
+      </div>
     </header>
     <div class="scroll-area">
       <div id="collection-items" class="item-grid"></div>
+    </div>
+    <div id="collection-select-bar" class="select-bar" hidden>
+      <button class="btn-secondary" id="btn-select-remove">Keluarkan</button>
+      <button class="btn-secondary btn-danger-text" id="btn-select-delete">Hapus</button>
+      <button class="btn-primary" id="btn-select-done">Selesai</button>
     </div>
   </section>
 
@@ -179,6 +202,19 @@
   </section>
 
 </main>
+
+<div id="bottom-sheet" class="sheet-backdrop" hidden>
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <header class="sheet-header">
+      <h3 class="sheet-title" id="sheet-title">Sheet</h3>
+      <button class="sheet-close" id="sheet-close" aria-label="Tutup">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </header>
+    <div class="sheet-body" id="sheet-body"></div>
+  </div>
+</div>
 
 <div id="toast" class="toast" hidden></div>
 <script src="/app.js"></script>

@@ -14,6 +14,7 @@
   --cream: #FFF6DC;
   --line: #26221C;
   --radius: 16px;
+  --folder-paper: #FFFFFF;
   --shadow-card: 3px 3px 0 var(--line);
   --shadow-btn: 3px 3px 0 var(--line);
 }
@@ -27,14 +28,16 @@
   --line: #3A382F;
   --mint: #2C4029;
   --yellow: #E5BE57;
+  --folder-paper: #2C2B25;
   --shadow-card: 3px 3px 0 rgba(0, 0, 0, 0.7);
   --shadow-btn: 3px 3px 0 rgba(0, 0, 0, 0.7);
 }
 
 /* Penurunan saturasi ~15% untuk aksen pada dark mode */
-[data-theme="dark"] .folder-tab,
+[data-theme="dark"] .folder-back-path,
 [data-theme="dark"] .folder-tile,
-[data-theme="dark"] .price-tag {
+[data-theme="dark"] .price-tag,
+[data-theme="dark"] .swatch-btn {
   filter: saturate(0.85) brightness(0.92);
 }
 
@@ -442,13 +445,13 @@ input {
   font-size: 13px;
 }
 
-/* ---------- Khusus: Geometri Bentuk Folder (Wajib - Gambar 6) ---------- */
+/* ---------- Khusus: Geometri Bentuk Folder Vektor SVG (Tugas 1) ---------- */
 .folder-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
-  row-gap: 22px; /* Jarak aman agar tab baris bawah tidak menempel pada kartu atasnya */
-  margin-top: 14px; /* Ruang aman untuk tab baris teratas */
+  row-gap: 22px;
+  margin-top: 14px;
   margin-bottom: 24px;
 }
 
@@ -462,53 +465,74 @@ input {
   padding: 0;
   text-align: left;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
-/* Tab warna kecil di belakang badan, mencuat 10-12px di atas tepi atas badan */
-.folder-tab {
+.folder-vector-wrap {
+  position: relative;
+  width: 100%;
+  min-height: 114px;
+}
+
+.folder-svg {
   position: absolute;
-  top: -11px;
-  left: 16px;
-  width: 68px; /* ~40% lebar kartu */
-  height: 20px;
-  border-radius: 8px 8px 0 0;
-  border: 1.5px solid var(--line);
-  border-bottom: none;
-  z-index: 1;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
   pointer-events: none;
 }
 
-/* Badan folder putih dan tenang di lapisan depan */
-.folder-body {
+.folder-back-path {
+  stroke: var(--line);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.folder-paper-path {
+  fill: var(--folder-paper);
+  stroke: var(--line);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.folder-flap-path {
+  fill: var(--surface);
+  stroke: var(--line);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  filter: drop-shadow(var(--shadow-card));
+  transition: filter 120ms ease;
+}
+
+.folder-content {
   position: relative;
-  z-index: 2;
-  background: var(--surface);
-  border: 1.5px solid var(--line);
-  border-radius: 16px;
-  box-shadow: var(--shadow-card);
-  padding: 14px;
-  min-height: 112px;
+  z-index: 3;
+  padding: 24px 14px 14px 14px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  min-height: 114px;
+  height: 100%;
   box-sizing: border-box;
-  transition: transform 120ms ease, box-shadow 120ms ease;
+  transition: transform 120ms ease;
 }
 
-.folder-card:active .folder-body {
+.folder-card:active .folder-content {
   transform: translate(1px, 1px);
-  box-shadow: 2px 2px 0 var(--line);
 }
 
-.folder-card:active .folder-tab {
-  top: -10px;
+.folder-card:active .folder-flap-path {
+  filter: drop-shadow(2px 2px 0 var(--line));
 }
 
 .folder-top {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 /* Ubin ikon kecil berwarna (40px) */
@@ -964,10 +988,14 @@ input {
 .focus-screen {
   background: #0E0E0E;
   color: #F5F2EA;
-  padding: 20px 20px 32px;
+  padding: 16px 20px 24px;
   max-width: 500px;
   margin: 0 auto;
   width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
 }
 
 .focus-top {
@@ -992,7 +1020,7 @@ input {
 .focus-progress {
   display: flex;
   gap: 5px;
-  margin: 12px 0 18px;
+  margin: 12px 0 16px;
 }
 
 .focus-progress i {
@@ -1007,12 +1035,24 @@ input {
   background: var(--yellow);
 }
 
+.focus-center-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin: auto 0;
+}
+
 .focus-card {
   background: #FFFFFF;
   color: #1D1B16;
   border-radius: 20px;
   padding: 16px;
   box-shadow: none;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .focus-card-source {
@@ -1066,8 +1106,9 @@ input {
 .focus-actions {
   display: flex;
   gap: 12px;
-  margin-top: 16px;
+  margin-top: 18px;
   align-items: center;
+  width: 100%;
 }
 
 .focus-actions .btn-primary {
@@ -1080,7 +1121,7 @@ input {
   font-weight: 800;
 }
 
-.btn-skip {
+.btn-circle-action {
   width: 50px;
   height: 50px;
   background: transparent;
@@ -1092,15 +1133,21 @@ input {
   justify-content: center;
   cursor: pointer;
   flex: none;
-  transition: transform 120ms ease, border-color 120ms ease;
+  transition: transform 120ms ease, border-color 120ms ease, opacity 120ms ease;
 }
 
-.btn-skip:hover {
-  border-color: rgba(255, 255, 255, 0.8);
+.btn-circle-action:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.85);
 }
 
-.btn-skip:active {
+.btn-circle-action:active:not(:disabled) {
   transform: translateY(1px);
+}
+
+.btn-circle-action:disabled {
+  opacity: 0.25;
+  cursor: default;
+  pointer-events: none;
 }
 
 .focus-done-wrap {
@@ -1109,6 +1156,9 @@ input {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  flex: 1;
+  width: 100%;
 }
 
 .focus-done-wrap h2 {
@@ -1168,3 +1218,602 @@ input {
   color: var(--muted);
   opacity: 0.85;
 }
+
+/* ---------- Bottom Sheet Generik (Tugas 2, 4, 5, 7) ---------- */
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(14, 14, 14, 0.55);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  animation: fadeIn 140ms ease-out;
+}
+
+.sheet-panel {
+  background: var(--surface);
+  border-top: 1.5px solid var(--line);
+  border-radius: 24px 24px 0 0;
+  padding: 12px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  max-height: 85vh;
+  overflow-y: auto;
+  max-width: 500px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.2);
+  animation: sheetSlideUp 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes sheetSlideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.sheet-handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--muted);
+  margin: 0 auto 12px;
+  opacity: 0.35;
+}
+
+.sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.sheet-title {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.3px;
+}
+
+.sheet-close {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  transition: color 120ms ease;
+}
+
+.sheet-close:hover {
+  color: var(--ink);
+}
+
+.sheet-form-group {
+  margin-bottom: 18px;
+}
+
+.sheet-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.sheet-label {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.sheet-char-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.sheet-input {
+  width: 100%;
+  height: 46px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 0 14px;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.sheet-input:focus {
+  border-color: var(--ink);
+  background: var(--surface);
+}
+
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 8px;
+}
+
+.swatch-btn {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: transform 120ms ease;
+}
+
+.swatch-btn:active {
+  transform: scale(0.92);
+}
+
+.swatch-btn.selected {
+  border-color: var(--line);
+  box-shadow: 0 0 0 2px var(--surface) inset;
+}
+
+.swatch-check {
+  display: flex;
+  color: #1D1B16;
+}
+
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 8px;
+}
+
+.icon-pick-btn {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  border: 1.5px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: transform 120ms ease, background 120ms ease;
+}
+
+.icon-pick-btn:active {
+  transform: scale(0.92);
+}
+
+.icon-pick-btn.selected {
+  background: var(--selected-color, var(--yellow));
+  color: #1D1B16;
+  border-color: var(--line);
+}
+
+.btn-sheet-submit {
+  width: 100%;
+  height: 48px;
+  margin-top: 20px;
+  font-size: 15px;
+  font-weight: 800;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-sheet-submit:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.sheet-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sheet-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 16px;
+  background: var(--bg);
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  transition: background 120ms ease;
+}
+
+.sheet-menu-item:hover {
+  background: var(--cream);
+}
+
+.sheet-menu-item:active {
+  transform: translateY(1px);
+}
+
+.sheet-menu-item.danger {
+  color: #E4572E;
+}
+
+.sheet-menu-item.danger:hover {
+  background: rgba(228, 87, 46, 0.1);
+}
+
+/* ---------- Layar Koleksi Berfitur (Tugas 4) ---------- */
+.collection-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.collection-header-center {
+  flex: 1;
+  text-align: center;
+  min-width: 0;
+  padding: 0 8px;
+}
+
+.collection-header-sub {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.collection-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-yellow {
+  background: var(--yellow) !important;
+  color: #1D1B16 !important;
+}
+
+.select-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-width: 500px;
+  margin: 0 auto;
+  background: var(--surface);
+  border-top: 1.5px solid var(--line);
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  gap: 8px;
+  z-index: 50;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+  animation: fadeIn 120ms ease;
+}
+
+.select-bar button {
+  flex: 1;
+  height: 44px;
+  font-size: 13.5px;
+}
+
+.item-card.is-selectable {
+  position: relative;
+  cursor: pointer;
+}
+
+.card-select-checkbox {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 10;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 2px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  transition: background 120ms ease;
+  pointer-events: none;
+}
+
+.item-card.is-selected .card-select-checkbox {
+  background: var(--yellow);
+  color: #1D1B16;
+}
+
+.item-card.is-selected {
+  outline: 2px solid var(--yellow);
+}
+
+/* ---------- Layar Detail Kaya Aksi (Tugas 5) ---------- */
+.detail-title-wrap {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.btn-pencil {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.btn-pencil:hover {
+  color: var(--ink);
+  background: var(--cream);
+}
+
+.detail-inline-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.detail-inline-input {
+  width: 100%;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  background: var(--surface);
+  color: var(--ink);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.detail-inline-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.detail-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.chip-collection-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 12px 4px 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+  transition: transform 120ms ease;
+}
+
+.chip-collection-meta:active {
+  transform: translateY(1px);
+}
+
+.chip-collection-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid rgba(0,0,0,0.15);
+}
+
+.detail-date-text {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.btn-detail-open {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 52px;
+  font-size: 15px;
+  font-weight: 800;
+  text-decoration: none;
+  margin: 16px 0 18px;
+  line-height: 1.25;
+}
+
+.btn-detail-url {
+  font-size: 11.5px;
+  font-weight: 600;
+  opacity: 0.75;
+  margin-top: 2px;
+  max-width: 90%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-action-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.detail-action-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 4px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 120ms ease;
+}
+
+.detail-action-tile:active {
+  transform: translateY(1px);
+}
+
+.detail-action-tile.danger {
+  color: #E4572E;
+}
+
+.detail-action-tile.loading svg {
+  animation: spin 800ms linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.btn-add-tag {
+  border: 1.5px dashed var(--line);
+  background: transparent;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tag-del-btn {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 0 0 4px;
+  opacity: 0.6;
+}
+
+.tag-del-btn:hover {
+  opacity: 1;
+}
+
+.detail-note-area {
+  width: 100%;
+  min-height: 84px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+  background: var(--surface);
+  color: var(--ink);
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.detail-note-area:focus {
+  outline: none;
+  border-color: var(--ink);
+}
+
+/* ---------- Layar Cari Dibuka dengan Isi Pustaka (Tugas 6) ---------- */
+.search-top {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.search-input-wrap {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-input-wrap input {
+  width: 100%;
+  height: 46px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 0 14px 0 38px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.search-input-wrap input:focus {
+  border-color: var(--ink);
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--muted);
+  pointer-events: none;
+  display: flex;
+}
+
+.search-cancel-btn {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  padding: 8px 4px;
+  cursor: pointer;
+}
+
+.search-stats-panel {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 14px 8px;
+  margin-bottom: 4px;
+}
+
+.search-stats-panel .stat-card {
+  padding: 0 4px;
+}
+
+.search-stats-panel .stat-value {
+  font-size: 20px;
+}
+

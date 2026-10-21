@@ -18,6 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 KARAKEEP_BASE_URL = os.environ.get("KARAKEEP_BASE_URL", "http://karakeep-web-1:3000").rstrip("/")
+KARAKEEP_PUBLIC_URL = os.environ.get("KARAKEEP_PUBLIC_URL", "http://ai-core:3000").rstrip("/")
 KARAKEEP_API_KEY = os.environ.get("KARAKEEP_API_KEY", "")
 POCI_USERNAME = os.environ.get("POCI_USERNAME", "")
 POCI_PASSWORD = os.environ.get("POCI_PASSWORD", "")
@@ -117,6 +118,19 @@ async def create_list(request: Request):
     return JSONResponse(status_code=r.status_code, content=r.json())
 
 
+@app.patch("/api/lists/{list_id}")
+async def update_list(request: Request, list_id: str):
+    body = await request.json()
+    r = await karakeep(request, "PATCH", f"/api/v1/lists/{list_id}", json=body)
+    return JSONResponse(status_code=r.status_code, content=r.json() if r.content else {})
+
+
+@app.delete("/api/lists/{list_id}")
+async def delete_list(request: Request, list_id: str):
+    r = await karakeep(request, "DELETE", f"/api/v1/lists/{list_id}")
+    return Response(status_code=r.status_code, content=r.content)
+
+
 @app.get("/api/lists/{list_id}/bookmarks")
 async def list_bookmarks_in_list(request: Request, list_id: str, limit: int = 24, cursor: str | None = None):
     params: dict = {"limit": limit}
@@ -136,6 +150,22 @@ async def add_to_list(request: Request, list_id: str, bookmark_id: str):
 async def remove_from_list(request: Request, list_id: str, bookmark_id: str):
     r = await karakeep(request, "DELETE", f"/api/v1/lists/{list_id}/bookmarks/{bookmark_id}")
     return Response(status_code=r.status_code, content=r.content)
+
+
+@app.post("/api/bookmarks/{bookmark_id}/recrawl")
+async def recrawl_bookmark(request: Request, bookmark_id: str):
+    r = await karakeep(request, "POST", f"/api/v1/bookmarks/{bookmark_id}/recrawl")
+    return Response(
+        status_code=r.status_code,
+        content=r.content,
+        media_type=r.headers.get("content-type", "application/json"),
+    )
+
+
+@app.get("/api/config")
+async def get_config(request: Request):
+    require_login(request)
+    return {"karakeep_public_url": KARAKEEP_PUBLIC_URL}
 
 
 @app.get("/api/tags")
