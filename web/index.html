@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FED264">
+<title>Poci - Kantong Simpanan</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<!-- Layar login -->
+<section id="screen-login" class="screen">
+  <div class="login-box">
+    <div class="login-logo">Poci</div>
+    <p class="login-sub">Kantong simpananmu, dari server rumahmu sendiri.</p>
+    <form id="login-form">
+      <label>Username<input id="login-username" autocomplete="username" required></label>
+      <label>Password<input id="login-password" type="password" autocomplete="current-password" required></label>
+      <button class="btn-primary" type="submit">Masuk</button>
+      <p id="login-error" class="error-text" hidden></p>
+    </form>
+  </div>
+</section>
+
+<!-- Kerangka aplikasi: satu layar tampil pada satu waktu, berpindah seperti tab -->
+<main id="app" hidden>
+
+  <section id="screen-home" class="screen app-screen">
+    <header class="home-top">
+      <button class="btn-square" id="btn-settings" aria-label="Pengaturan">&#9881;</button>
+      <div class="home-top-right">
+        <button class="btn-square" id="btn-new-collection" aria-label="Koleksi baru">&#128193;+</button>
+        <button class="btn-square" id="btn-search" aria-label="Cari">&#128269;</button>
+      </div>
+    </header>
+    <h1 class="home-headline">Simpan sekarang.<br>Temukan kapan pun.</h1>
+    <form id="quick-save-form" class="quick-save">
+      <input id="quick-save-input" type="url" inputmode="url" placeholder="Tempel link di sini...">
+      <button class="btn-plus" type="submit" aria-label="Simpan link">+</button>
+    </form>
+    <button class="review-banner" id="btn-focus">
+      <span class="review-bell">&#128276;</span>
+      <span class="review-text"><strong id="review-count">0 simpanan baru</strong><span> menunggumu di Focus Mode</span></span>
+      <span class="review-cta">Tinjau</span>
+    </button>
+    <div class="section-head">
+      <h2>Koleksiku</h2>
+      <span class="sort-label">Terbaru</span>
+    </div>
+    <div id="home-collections" class="folder-grid"></div>
+    <div class="section-head">
+      <h2>Simpanan Terbaru</h2>
+      <button class="link-btn" id="btn-see-library">Lihat semua</button>
+    </div>
+    <div id="home-recent" class="item-grid"></div>
+  </section>
+
+  <section id="screen-library" class="screen app-screen" hidden>
+    <header class="sub-top">
+      <button class="btn-square" data-nav="home" aria-label="Kembali">&#8592;</button>
+      <h2>Perpustakaan</h2>
+    </header>
+    <div class="stats-panel" id="stats-panel"></div>
+    <div id="tag-cloud" class="tag-cloud"></div>
+    <div class="scroll-area">
+      <div id="library-items" class="item-grid"></div>
+      <button class="btn-loadmore" id="btn-load-more" hidden>Muat lagi</button>
+    </div>
+  </section>
+
+  <section id="screen-search" class="screen app-screen" hidden>
+    <header class="sub-top">
+      <button class="btn-square" data-nav="home" aria-label="Kembali">&#8592;</button>
+      <h2>Cari Simpanan</h2>
+    </header>
+    <form id="search-form" class="search-bar">
+      <input id="search-input" type="search" placeholder="Ketik kata kunci...">
+      <button class="btn-primary" type="submit">Cari</button>
+    </form>
+    <div class="scroll-area">
+      <div id="search-results" class="item-grid"></div>
+    </div>
+  </section>
+
+  <section id="screen-detail" class="screen app-screen" hidden></section>
+
+  <section id="screen-collection" class="screen app-screen" hidden>
+    <header class="sub-top">
+      <button class="btn-square" data-nav="home" aria-label="Kembali">&#8592;</button>
+      <h2 id="collection-title">Koleksi</h2>
+    </header>
+    <div class="scroll-area">
+      <div id="collection-items" class="item-grid"></div>
+    </div>
+  </section>
+
+  <section id="screen-focus" class="screen focus-screen" hidden></section>
+
+  <section id="screen-settings" class="screen app-screen" hidden>
+    <header class="sub-top">
+      <button class="btn-square" data-nav="home" aria-label="Kembali">&#8592;</button>
+      <h2>Pengaturan</h2>
+    </header>
+    <div class="scroll-area settings-list">
+      <div class="setting-row">
+        <span>Tampilan</span>
+        <div class="segmented" id="theme-segment">
+          <button data-theme-choice="system">Sistem</button>
+          <button data-theme-choice="light">Terang</button>
+          <button data-theme-choice="dark">Gelap</button>
+        </div>
+      </div>
+      <div class="setting-row"><span>Mesin</span><strong>Karakeep</strong></div>
+      <div class="setting-row"><span>Status server</span><strong id="server-status">Memeriksa...</strong></div>
+      <button class="btn-danger" id="btn-logout">Keluar</button>
+    </div>
+  </section>
+
+</main>
+
+<div id="toast" class="toast" hidden></div>
+<script src="/app.js"></script>
+</body>
+</html>

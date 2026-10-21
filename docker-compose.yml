@@ -1,0 +1,21 @@
+# Poci - frontend untuk Karakeep di homelab user
+# Pola sama dengan CreatorOS Web v2: satu service, proxy FastAPI + frontend statis.
+# API key Karakeep HANYA hidup di .env server ini, tidak pernah dikirim ke browser.
+services:
+  poci:
+    build: .
+    container_name: poci
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8100:8000"
+    volumes:
+      - ${HOME}/homelab/data/poci:/data
+    networks:
+      - default
+      - ai-network
+
+networks:
+  ai-network:
+    external: true
