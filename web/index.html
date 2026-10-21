@@ -7,7 +7,7 @@
 <title>Poci - Kantong Simpanan</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -31,21 +31,57 @@
 
   <section id="screen-home" class="screen app-screen">
     <header class="home-top">
-      <button class="btn-square" id="btn-settings" aria-label="Pengaturan">&#9881;</button>
+      <button class="btn-square" id="btn-settings" aria-label="Pengaturan">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      </button>
       <div class="home-top-right">
-        <button class="btn-square" id="btn-new-collection" aria-label="Koleksi baru">&#128193;+</button>
-        <button class="btn-square" id="btn-search" aria-label="Cari">&#128269;</button>
+        <button class="btn-square" id="btn-new-collection" aria-label="Koleksi baru">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/>
+            <line x1="12" y1="10" x2="12" y2="16"/>
+            <line x1="9" y1="13" x2="15" y2="13"/>
+          </svg>
+        </button>
+        <button class="btn-square" id="btn-search" aria-label="Cari">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </button>
       </div>
     </header>
     <h1 class="home-headline">Simpan sekarang.<br>Temukan kapan pun.</h1>
     <form id="quick-save-form" class="quick-save">
-      <input id="quick-save-input" type="url" inputmode="url" placeholder="Tempel link di sini...">
-      <button class="btn-plus" type="submit" aria-label="Simpan link">+</button>
+      <div class="quick-save-input-wrap">
+        <span class="quick-save-hash">#</span>
+        <input id="quick-save-input" type="url" inputmode="url" placeholder="Tempel link di sini...">
+      </div>
+      <button class="btn-plus" type="submit" aria-label="Simpan link">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      </button>
     </form>
     <button class="review-banner" id="btn-focus">
-      <span class="review-bell">&#128276;</span>
-      <span class="review-text"><strong id="review-count">0 simpanan baru</strong><span> menunggumu di Focus Mode</span></span>
-      <span class="review-cta">Tinjau</span>
+      <span class="review-bell">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+          <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+        </svg>
+      </span>
+      <span class="review-text">
+        <strong id="review-count">0 simpanan baru</strong>
+        <span>menunggumu di Focus Mode</span>
+      </span>
+      <span class="review-cta">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </span>
     </button>
     <div class="section-head">
       <h2>Koleksiku</h2>
@@ -61,7 +97,12 @@
 
   <section id="screen-library" class="screen app-screen" hidden>
     <header class="sub-top">
-      <button class="btn-square" data-nav="home" aria-label="Kembali">&#8592;</button>
+      <button class="btn-square" data-nav="home" aria-label="Kembali">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"/>
+          <polyline points="12 19 5 12 12 5"/>
+        </svg>
+      </button>
       <h2>Perpustakaan</h2>
     </header>
     <div class="stats-panel" id="stats-panel"></div>
@@ -74,7 +115,12 @@
 
   <section id="screen-search" class="screen app-screen" hidden>
     <header class="sub-top">
-      <button class="btn-square" data-nav="home" aria-label="Kembali">&#8592;</button>
+      <button class="btn-square" data-nav="home" aria-label="Kembali">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"/>
+          <polyline points="12 19 5 12 12 5"/>
+        </svg>
+      </button>
       <h2>Cari Simpanan</h2>
     </header>
     <form id="search-form" class="search-bar">
@@ -90,7 +136,12 @@
 
   <section id="screen-collection" class="screen app-screen" hidden>
     <header class="sub-top">
-      <button class="btn-square" data-nav="home" aria-label="Kembali">&#8592;</button>
+      <button class="btn-square" data-nav="home" aria-label="Kembali">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"/>
+          <polyline points="12 19 5 12 12 5"/>
+        </svg>
+      </button>
       <h2 id="collection-title">Koleksi</h2>
     </header>
     <div class="scroll-area">
@@ -102,20 +153,27 @@
 
   <section id="screen-settings" class="screen app-screen" hidden>
     <header class="sub-top">
-      <button class="btn-square" data-nav="home" aria-label="Kembali">&#8592;</button>
+      <button class="btn-square" data-nav="home" aria-label="Kembali">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"/>
+          <polyline points="12 19 5 12 12 5"/>
+        </svg>
+      </button>
       <h2>Pengaturan</h2>
     </header>
     <div class="scroll-area settings-list">
-      <div class="setting-row">
-        <span>Tampilan</span>
-        <div class="segmented" id="theme-segment">
-          <button data-theme-choice="system">Sistem</button>
-          <button data-theme-choice="light">Terang</button>
-          <button data-theme-choice="dark">Gelap</button>
+      <div class="settings-card">
+        <div class="setting-row">
+          <span>Tampilan</span>
+          <div class="segmented" id="theme-segment">
+            <button data-theme-choice="system">Sistem</button>
+            <button data-theme-choice="light">Terang</button>
+            <button data-theme-choice="dark">Gelap</button>
+          </div>
         </div>
+        <div class="setting-row"><span>Mesin</span><strong>Karakeep</strong></div>
+        <div class="setting-row"><span>Status server</span><strong id="server-status">Memeriksa...</strong></div>
       </div>
-      <div class="setting-row"><span>Mesin</span><strong>Karakeep</strong></div>
-      <div class="setting-row"><span>Status server</span><strong id="server-status">Memeriksa...</strong></div>
       <button class="btn-danger" id="btn-logout">Keluar</button>
     </div>
   </section>
