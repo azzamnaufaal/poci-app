@@ -80,8 +80,67 @@ const ICONS = {
   mascot: `<svg width="44" height="44" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="poci-mascot"><path d="M10 20h28v14a8 8 0 0 1-8 8H18a8 8 0 0 1-8-8V20Z"/><path d="M14 20c0-6 4-10 10-10s10 4 10 10"/><circle cx="24" cy="7" r="2" fill="currentColor"/><path d="M38 24h4a4 4 0 0 1 4 4v2a4 4 0 0 1-4 4h-4"/><path d="M10 26l-6-4v-2l6 2"/><circle cx="20" cy="28" r="1.5" fill="currentColor"/><circle cx="28" cy="28" r="1.5" fill="currentColor"/><path d="M22 33c1 1 3 1 4 0"/></svg>`,
 };
 
-/* ---------------- Parser Metadata Koleksi (Tugas 2) ---------------- */
+/* ---------------- Peta Kunci Ikon ke Emoji (Tugas A) ---------------- */
+const ICON_EMOJIS = {
+  folder: "📁",
+  star: "⭐",
+  heart: "❤️",
+  book: "📚",
+  music: "🎵",
+  camera: "📷",
+  flag: "🚩",
+  moon: "🌙",
+  sun: "☀️",
+  cloud: "☁️",
+  key: "🔑",
+  calendar: "📅",
+  globe: "🌐",
+  gift: "🎁",
+  leaf: "🍃",
+  briefcase: "💼",
+  cart: "🛒",
+  plane: "✈️",
+  car: "🚗",
+  coffee: "☕",
+  film: "🎬",
+  headphones: "🎧",
+  pin: "📌",
+  fork: "🍴",
+};
+
+function buildListDescription(existingDesc, iconKey, colorHex) {
+  const pociLine = `poci:${iconKey}:${colorHex}`;
+  if (!existingDesc || !existingDesc.trim()) {
+    return pociLine;
+  }
+  const lines = existingDesc.split("\n");
+  const firstLine = lines[0].trim();
+  // Baris poci: menggantikan baris pertama HANYA bila baris pertama lama juga berawalan poci:
+  // atau berformat skema lama (kunci:#hex)
+  if (firstLine.startsWith("poci:") || (firstLine.includes(":") && ICON_SVGS[firstLine.split(":")[0]])) {
+    lines[0] = pociLine;
+    return lines.join("\n");
+  }
+  return [pociLine, ...lines].join("\n");
+}
+
+/* ---------------- Parser Metadata Koleksi (Tugas A & Tugas 2) ---------------- */
 function parseListMeta(list, index = 0) {
+  // Prioritas 1: baris pertama description berawalan poci: (skema baru)
+  if (list && list.description) {
+    const firstLine = list.description.split("\n")[0].trim();
+    if (firstLine.startsWith("poci:")) {
+      const parts = firstLine.split(":");
+      if (parts.length >= 3) {
+        const k = parts[1];
+        const c = parts[2];
+        if (ICON_SVGS[k] && c) {
+          return { iconKey: k, color: c, svg: ICON_SVGS[k] };
+        }
+      }
+    }
+  }
+  // Prioritas 2: kolom icon berformat <kunci>:<#hex> (skema lama putaran 2)
   if (list && list.icon && list.icon.includes(":")) {
     const parts = list.icon.split(":");
     const k = parts[0];
@@ -90,14 +149,7 @@ function parseListMeta(list, index = 0) {
       return { iconKey: k, color: c, svg: ICON_SVGS[k] };
     }
   }
-  // Fallback deskripsi bila ada format poci:
-  if (list && list.description && list.description.startsWith("poci:")) {
-    const parts = list.description.split("\n")[0].split(":");
-    if (parts.length >= 3 && ICON_SVGS[parts[1]]) {
-      return { iconKey: parts[1], color: parts[2], svg: ICON_SVGS[parts[1]] };
-    }
-  }
-  // Fallback kata kunci nama
+  // Prioritas 3: tebakan kata kunci nama
   const name = (((list && list.name) || "") + " " + ((list && list.description) || "")).toLowerCase();
   let iconKey = "folder";
   if (/resep|makan|food|kuliner|masak|cook|recipe/i.test(name)) iconKey = "fork";
@@ -232,6 +284,10 @@ const asArray = (data, key) => (Array.isArray(data) ? data : data[key] || []);
 /* ---------------- Navigasi ---------------- */
 const SCREENS = ["home", "library", "search", "detail", "collection", "focus", "settings"];
 function showScreen(name) {
+  if (state.currentScreen && state.currentScreen !== "detail" && name === "detail") {
+    state.detailPreviousScreen = state.currentScreen;
+  }
+  state.currentScreen = name;
   SCREENS.forEach((s) => { const el = $("#screen-" + s); if (el) el.hidden = s !== name; });
   $("#app").hidden = false;
   $("#screen-login").hidden = true;
@@ -329,9 +385,9 @@ async function loadHome() {
       <button class="folder-card" data-list="${esc(l.id)}">
         <div class="folder-vector-wrap">
           <svg class="folder-svg" viewBox="0 0 200 134" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path class="folder-back-path" d="M4 14C4 8.5 8.5 4 14 4H70C74 4 77.5 6 80 9L88 18C90.5 21 94 22 98 22H186C191.5 22 196 26.5 196 32V124C196 128.5 192.5 132 188 132H12C7.5 132 4 128.5 4 124V14Z" fill="${meta.color}" />
-            <path class="folder-paper-path" d="M16 16C16 13.8 17.8 12 20 12H180C182.2 12 184 13.8 184 16V34H16V16Z" />
-            <path class="folder-flap-path" d="M4 40C4 29 13 20 24 20H176C187 20 196 29 196 40V120C196 127 190 132 183 132H17C10 132 4 127 4 120V40Z" />
+            <path class="folder-back-path" d="M10 64V12C10 7.58 13.58 4 18 4H78C82.42 4 86 6.5 88 10L97 20C98.5 21.5 100.5 22 103 22H178C184 22 190 28 190 36V64H10Z" fill="${meta.color}" />
+            <path class="folder-paper-path" d="M16 30V16C16 13.79 17.79 12 20 12H180C182.21 12 184 13.79 184 16V30H16Z" />
+            <path class="folder-flap-path" d="M4 36C4 27.16 11.16 20 20 20H180C188.84 20 196 27.16 196 36V120C196 126.63 190.63 132 184 132H16C9.37 132 4 126.63 4 120V36Z" />
           </svg>
           <div class="folder-content">
             <div class="folder-top">
@@ -584,19 +640,21 @@ function openCollectionSheet(existingList = null) {
       const name = input.value.trim();
       if (!name) return;
 
-      const iconValue = `${selectedIcon}:${selectedColor}`;
+      const emoji = ICON_EMOJIS[selectedIcon] || "📁";
 
       try {
         if (isEdit) {
+          const desc = buildListDescription(existingList.description, selectedIcon, selectedColor);
           await api(`/api/lists/${existingList.id}`, {
             method: "PATCH",
-            body: JSON.stringify({ name, icon: iconValue }),
+            body: JSON.stringify({ name, icon: emoji, description: desc }),
           });
           toast("Koleksi diperbarui");
         } else {
+          const desc = `poci:${selectedIcon}:${selectedColor}`;
           await api("/api/lists", {
             method: "POST",
-            body: JSON.stringify({ name, icon: iconValue }),
+            body: JSON.stringify({ name, icon: emoji, description: desc }),
           });
           toast("Koleksi dibuat");
         }
@@ -680,22 +738,22 @@ async function openSearch() {
       <div class="stat-card">
         <span class="stat-icon">${ICONS.collection}</span>
         <b class="stat-value">${state.lists.length}</b>
-        <span>Koleksi</span>
+        <span class="stat-label">Koleksi</span>
       </div>
       <div class="stat-card">
         <span class="stat-icon">${ICONS.bookmark}</span>
         <b class="stat-value">${totalBms}</b>
-        <span>Simpanan</span>
+        <span class="stat-label">Simpanan</span>
       </div>
       <div class="stat-card">
         <span class="stat-icon">${ICONS.pinned}</span>
         <b class="stat-value">${favCount}</b>
-        <span>Disematkan</span>
+        <span class="stat-label stat-label-compact">Disematkan</span>
       </div>
       <div class="stat-card">
         <span class="stat-icon">${ICONS.tag}</span>
         <b class="stat-value">${state.tags.length}</b>
-        <span>Tag</span>
+        <span class="stat-label">Tag</span>
       </div>`;
 
     const recent = bms.slice(0, 6);
@@ -948,7 +1006,35 @@ function openSwipeMode(items, title) {
   renderFocusCard();
 }
 
-/* ---------------- Layar Detail Kaya Aksi (Tugas 5) ---------------- */
+/* ---------------- Resolver Keanggotaan Koleksi Nyata (Tugas E) ---------------- */
+async function resolveBookmarkLists(bookmarkId, forceRefresh = false) {
+  if (!state.membershipCache) state.membershipCache = new Map();
+  if (!forceRefresh && state.membershipCache.has(bookmarkId)) {
+    return state.membershipCache.get(bookmarkId);
+  }
+
+  if (!state.lists || !state.lists.length) {
+    const ld = await apiJson("/api/lists");
+    state.lists = asArray(ld, "lists");
+  }
+
+  const results = await Promise.all(
+    state.lists.map(async (l) => {
+      try {
+        const bmsData = await apiJson(`/api/lists/${l.id}/bookmarks?limit=100`);
+        const bms = asArray(bmsData, "bookmarks");
+        return bms.some((item) => item.id === bookmarkId) ? l : null;
+      } catch {
+        return null;
+      }
+    })
+  );
+  const containingLists = results.filter(Boolean);
+  state.membershipCache.set(bookmarkId, containingLists);
+  return containingLists;
+}
+
+/* ---------------- Layar Detail Kaya Aksi (Tugas 5 & Tugas E) ---------------- */
 async function openDetail(id) {
   showScreen("detail");
   const wrap = $("#screen-detail");
@@ -959,11 +1045,13 @@ async function openDetail(id) {
     apiJson("/api/lists"),
   ]);
   state.lists = asArray(listsData, "lists");
+  const containingLists = await resolveBookmarkLists(id);
+
   const c = b.content || {};
   const img = cardImage(b);
 
-  // Koleksi bookmark ini
-  const parentList = (b.lists && b.lists[0]) || state.lists.find((l) => (b.listIds || []).includes(l.id));
+  // Koleksi bookmark ini (Tugas E: keanggotaan nyata)
+  const parentList = containingLists[0] || null;
   const listMeta = parentList ? parseListMeta(parentList) : null;
   const listChipText = parentList ? esc(parentList.name) : "Tanpa koleksi";
   const listChipDot = parentList ? `<span class="chip-collection-dot" style="background:${listMeta.color}"></span>` : "";
@@ -1083,6 +1171,11 @@ async function openDetail(id) {
   $("#detail-back-btn").onclick = () => {
     if (state.currentListId) {
       openCollection(state.currentListId);
+    } else if (state.detailPreviousScreen === "search") {
+      showScreen("search");
+    } else if (state.detailPreviousScreen === "library") {
+      showScreen("library");
+      loadLibrary(false);
     } else {
       showScreen("home");
       loadHome();
@@ -1117,16 +1210,17 @@ async function openDetail(id) {
     }
   };
 
-  // Pindah koleksi (chip meta & aksi Pindah)
+  // Pindah koleksi (chip meta & aksi Pindah - Tugas E)
   const handleMove = () => {
+    const currentListId = parentList ? parentList.id : "";
     const listsHtml = `
       <div style="display:flex;flex-direction:column;gap:8px;padding:4px 0 16px">
         <label class="sheet-menu-item" style="cursor:pointer">
-          <input type="radio" name="move_dest" value="" ${!parentList ? "checked" : ""}>
+          <input type="radio" name="move_dest" value="" ${!currentListId ? "checked" : ""}>
           <span>Tanpa koleksi</span>
         </label>
         ${state.lists.map((l) => {
-          const isCurrent = parentList && parentList.id === l.id;
+          const isCurrent = currentListId === l.id;
           const meta = parseListMeta(l);
           return `
             <label class="sheet-menu-item" style="cursor:pointer">
@@ -1143,16 +1237,42 @@ async function openDetail(id) {
           const destId = radio.value;
           closeBottomSheet();
           try {
-            if (parentList) {
-              await api(`/api/lists/${parentList.id}/bookmarks/${id}`, { method: "DELETE" }).catch(() => {});
-            }
+            let deleteFailed = false;
             if (destId) {
+              // 1. PUT ke tujuan
               await api(`/api/lists/${destId}/bookmarks/${id}`, { method: "PUT" });
-              const destList = state.lists.find((l) => l.id === destId);
-              toast(`Dipindahkan ke ${destList ? destList.name : "Koleksi"}`);
+              // 2. DELETE dari SEMUA list lain yang memuatnya
+              const toRemove = containingLists.filter((l) => l.id !== destId);
+              for (const l of toRemove) {
+                try {
+                  await api(`/api/lists/${l.id}/bookmarks/${id}`, { method: "DELETE" });
+                } catch {
+                  deleteFailed = true;
+                }
+              }
+              if (deleteFailed) {
+                toast("Sebagian gagal dipindahkan, coba lagi");
+              } else {
+                const destList = state.lists.find((l) => l.id === destId);
+                toast(`Dipindahkan ke ${destList ? destList.name : "Koleksi"}`);
+              }
             } else {
-              toast("Dikeluarkan dari koleksi");
+              // Tujuan Tanpa koleksi: DELETE dari SEMUA list yang memuatnya
+              for (const l of containingLists) {
+                try {
+                  await api(`/api/lists/${l.id}/bookmarks/${id}`, { method: "DELETE" });
+                } catch {
+                  deleteFailed = true;
+                }
+              }
+              if (deleteFailed) {
+                toast("Sebagian gagal dipindahkan, coba lagi");
+              } else {
+                toast("Dikeluarkan dari koleksi");
+              }
             }
+            // Segarkan cache keanggotaan dan render ulang detail
+            await resolveBookmarkLists(id, true);
             openDetail(id);
           } catch {
             toast("Gagal memindahkan");
