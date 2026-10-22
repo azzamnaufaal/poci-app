@@ -34,7 +34,7 @@ const state = {
   favouriteCount: 0,
 };
 
-/* ---------------- 24 Ikon Koleksi SVG (Tugas 2) ---------------- */
+/* ---------------- 43 Ikon Koleksi SVG (Tugas 2, diperbanyak 22 Okt) ---------------- */
 const ICON_SVGS = {
   folder: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>`,
   star: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
@@ -60,6 +60,25 @@ const ICON_SVGS = {
   headphones: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>`,
   pin: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>`,
   fork: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2v20M18 2a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3M6 2v6a3 3 0 0 0 3 3h0a3 3 0 0 0 3-3V2M9 11v11"/></svg>`,
+  palette: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a10 10 0 1 1 10-10c0 1.66-1.34 3-3 3h-2.2a2.5 2.5 0 0 0-2 4c.34.47.3 1-.1 1.45-.35.4-.85.55-1.7.55z"/><circle cx="7.5" cy="10.5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="7.5" r="1" fill="currentColor" stroke="none"/><circle cx="16.5" cy="10.5" r="1" fill="currentColor" stroke="none"/></svg>`,
+  game: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="11" rx="5"/><line x1="6" y1="10.5" x2="6" y2="14.5"/><line x1="4" y1="12.5" x2="8" y2="12.5"/><circle cx="16" cy="11" r="1" fill="currentColor" stroke="none"/><circle cx="18" cy="14" r="1" fill="currentColor" stroke="none"/></svg>`,
+  dumbbell: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5v11"/><path d="M3 9v6"/><path d="M17.5 6.5v11"/><path d="M21 9v6"/><path d="M6.5 12h11"/></svg>`,
+  dollar: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M15.5 9.3c-.6-1-1.9-1.6-3.5-1.6-2 0-3.6 1.1-3.6 2.6 0 3.6 7.2 1.9 7.2 4.6 0 1.5-1.6 2.6-3.6 2.6-1.6 0-2.9-.6-3.5-1.6"/><line x1="12" y1="5.8" x2="12" y2="18.2"/></svg>`,
+  phone: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`,
+  monitor: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`,
+  clock: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+  bulb: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.4 1 2.3h6c0-.9.4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg>`,
+  grad: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 9 12 4 2 9l10 5 10-5z"/><path d="M6 11.5V16c0 1.66 2.69 3 6 3s6-1.34 6-3v-4.5"/><path d="M22 9v5"/></svg>`,
+  shield: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+  tv: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>`,
+  bell: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
+  box: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`,
+  layers: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>`,
+  code: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`,
+  bolt: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+  bookmark: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`,
+  tag: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`,
+  home: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
 };
 
 /* ---------------- Ikon UI Antarmuka ---------------- */
@@ -106,6 +125,25 @@ const ICON_EMOJIS = {
   headphones: "🎧",
   pin: "📌",
   fork: "🍴",
+  palette: "🎨",
+  game: "🎮",
+  dumbbell: "💪",
+  dollar: "💲",
+  phone: "📞",
+  monitor: "🖥️",
+  clock: "🕐",
+  bulb: "💡",
+  grad: "🎓",
+  shield: "🛡️",
+  tv: "📺",
+  bell: "🔔",
+  box: "📦",
+  layers: "🗂️",
+  code: "💻",
+  bolt: "⚡",
+  bookmark: "🔖",
+  tag: "🏷️",
+  home: "🏠",
 };
 
 function buildListDescription(existingDesc, iconKey, colorHex) {
@@ -298,11 +336,12 @@ async function keluarAntrean(b) {
   await api(`/api/lists/${state.focusListId}/bookmarks/${b.id}`, { method: "DELETE" }).catch(() => {});
 }
 
-// Sesudah keluar antrean: bila simpanan tidak punya koleksi lain, pindah ke "Belum Ada Kategori".
+// Sesudah keluar antrean: bila simpanan tidak punya koleksi lain, pindah ke folder
+// sistem "Tanpa Kategori" (nama lama "Belum Ada Kategori" tetap diterima selama transisi).
 async function pindahKeKategoriBilaYatim(b) {
   if (state.isSwipeMode || !state.focusListId) return;
   try {
-    const kat = state.lists.find((l) => /belum ada kategori/i.test(l.name));
+    const kat = state.lists.find((l) => /belum ada kategori|tanpa kategori/i.test(l.name));
     if (!kat || kat.id === state.focusListId) return;
     for (const l of state.lists) {
       if (l.id === state.focusListId || l.id === kat.id) continue;
@@ -403,6 +442,25 @@ function bindCards(container) {
   });
 }
 
+/* Pengaman nama folder: nama yang tidak muat satu baris dikecilkan fontnya
+   bertahap (lantai 12px) supaya grid selalu seragam satu baris. */
+const _kanvasUkur = document.createElement("canvas").getContext("2d");
+function sesuaikanUkuranNamaFolder() {
+  document.querySelectorAll("#home-collections .folder-name").forEach((el) => {
+    el.style.fontSize = "";
+    const maxW = el.clientWidth - 2;
+    if (!maxW || maxW <= 0) return;
+    const teks = (el.textContent || "").trim();
+    if (!teks) return;
+    _kanvasUkur.font = "800 15.5px Archivo, sans-serif";
+    const lebar = _kanvasUkur.measureText(teks).width;
+    if (lebar > maxW) {
+      const ukuran = Math.max(12, Math.floor(15.5 * (maxW / lebar) * 2) / 2 - 0.5);
+      el.style.fontSize = ukuran + "px";
+    }
+  });
+}
+
 /* ---------------- Beranda (Tugas 1 & 3) ---------------- */
 async function loadHome() {
   const listsData = await apiJson("/api/lists");
@@ -427,9 +485,9 @@ async function loadHome() {
     return `
       <button class="folder-card" data-list="${esc(l.id)}">
         <div class="folder-vector-wrap">
-          <svg class="folder-svg" viewBox="0 0 200 152" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path class="folder-back-path" d="M10 76V14C10 8.48 14.48 4 20 4H76C81 4 85.2 6.7 87.6 10.6L97 23C98.7 25.4 101.2 26 104 26H176C183 26 190 33 190 42V76H10Z" fill="${meta.color}" />
-            <path class="folder-flap-path" d="M5 46C5 38.27 11.27 32 19 32H181C188.73 32 195 38.27 195 46L190.5 134C190 141.5 184 147 176.5 147H23.5C16 147 10 141.5 9.5 134L5 46Z" />
+          <svg class="folder-svg" viewBox="0 0 200 160" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path class="folder-back-path" d="M10 80V15C10 9.2 14.7 4.5 20.5 4.5H76C81.2 4.5 85.5 7.3 88 11.4L97.5 24.5C99.3 27.1 101.9 27.8 104.8 27.8H176C183.4 27.8 190 34.4 190 42.5V80H10Z" fill="${meta.color}" />
+            <path class="folder-flap-path" d="M5 49C5 40.9 11.4 34.5 19.2 34.5H180.8C188.6 34.5 195 40.9 195 49L190.5 141.5C190 149.3 183.9 155 176.2 155H23.8C16.1 155 10 149.3 9.5 141.5L5 49Z" />
           </svg>
           <div class="folder-content">
             <div class="folder-top">
@@ -449,6 +507,10 @@ async function loadHome() {
     </div>`;
 
   bindFolderCards(grid);
+  sesuaikanUkuranNamaFolder();
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => sesuaikanUkuranNamaFolder());
+  }
 
   // Focus Mode antrean "Belum Dibuka" atau simpanan terbaru
   const focusList = state.lists.find((l) => /belum dibuka/i.test(l.name));

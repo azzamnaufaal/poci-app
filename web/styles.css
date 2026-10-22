@@ -472,7 +472,7 @@ input {
 .folder-vector-wrap {
   position: relative;
   width: 100%;
-  aspect-ratio: 200 / 152;
+  aspect-ratio: 200 / 160;
 }
 
 .folder-svg {
@@ -511,7 +511,7 @@ input {
   position: absolute;
   inset: 0;
   z-index: 3;
-  padding: 38px 14px 13px 14px;
+  padding: 43px 14px 15px 14px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -531,7 +531,6 @@ input {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 10px;
 }
 
 /* Ubin ikon kecil berwarna (40px) */
@@ -554,11 +553,11 @@ input {
 }
 
 .folder-name {
-  font-size: 16px;
+  font-size: 15.5px;
   font-weight: 800;
   color: var(--ink);
   letter-spacing: -0.3px;
-  line-height: 1.25;
+  line-height: 1.2;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
