@@ -449,9 +449,9 @@ input {
 .folder-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  row-gap: 22px;
-  margin-top: 14px;
+  gap: 16px;
+  row-gap: 26px;
+  margin-top: 16px;
   margin-bottom: 24px;
 }
 
@@ -472,7 +472,7 @@ input {
 .folder-vector-wrap {
   position: relative;
   width: 100%;
-  min-height: 114px;
+  aspect-ratio: 200 / 152;
 }
 
 .folder-svg {
@@ -508,14 +508,13 @@ input {
 }
 
 .folder-content {
-  position: relative;
+  position: absolute;
+  inset: 0;
   z-index: 3;
-  padding: 24px 14px 14px 14px;
+  padding: 38px 14px 13px 14px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 114px;
-  height: 100%;
   box-sizing: border-box;
   transition: transform 120ms ease;
 }

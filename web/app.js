@@ -410,16 +410,26 @@ async function loadHome() {
   const grid = $("#home-collections");
   const shown = state.lists.slice(0, 6);
 
+  // Jumlah isi tiap koleksi dihitung dari daftarnya langsung (API daftar Karakeep
+  // tidak menyediakan numBookmarks, jadi teks "Koleksi" polos bukan pilihan)
+  const isiKoleksi = {};
+  await Promise.all(shown.map(async (l) => {
+    try {
+      const d = await apiJson(`/api/lists/${l.id}/bookmarks?limit=200`);
+      const n = asArray(d, "bookmarks").length;
+      isiKoleksi[l.id] = d && d.nextCursor ? `${n}+` : `${n}`;
+    } catch { isiKoleksi[l.id] = null; }
+  }));
+
   grid.innerHTML = shown.map((l, i) => {
     const meta = parseListMeta(l, i);
-    const countText = l.numBookmarks != null ? `${l.numBookmarks} item` : "Koleksi";
+    const countText = isiKoleksi[l.id] != null ? `${isiKoleksi[l.id]} simpanan` : "Koleksi";
     return `
       <button class="folder-card" data-list="${esc(l.id)}">
         <div class="folder-vector-wrap">
-          <svg class="folder-svg" viewBox="0 0 200 134" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path class="folder-back-path" d="M10 64V12C10 7.58 13.58 4 18 4H78C82.42 4 86 6.5 88 10L97 20C98.5 21.5 100.5 22 103 22H178C184 22 190 28 190 36V64H10Z" fill="${meta.color}" />
-            <path class="folder-paper-path" d="M16 30V16C16 13.79 17.79 12 20 12H180C182.21 12 184 13.79 184 16V30H16Z" />
-            <path class="folder-flap-path" d="M4 36C4 27.16 11.16 20 20 20H180C188.84 20 196 27.16 196 36V120C196 126.63 190.63 132 184 132H16C9.37 132 4 126.63 4 120V36Z" />
+          <svg class="folder-svg" viewBox="0 0 200 152" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path class="folder-back-path" d="M10 76V14C10 8.48 14.48 4 20 4H76C81 4 85.2 6.7 87.6 10.6L97 23C98.7 25.4 101.2 26 104 26H176C183 26 190 33 190 42V76H10Z" fill="${meta.color}" />
+            <path class="folder-flap-path" d="M5 46C5 38.27 11.27 32 19 32H181C188.73 32 195 38.27 195 46L190.5 134C190 141.5 184 147 176.5 147H23.5C16 147 10 141.5 9.5 134L5 46Z" />
           </svg>
           <div class="folder-content">
             <div class="folder-top">
