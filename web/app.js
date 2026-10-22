@@ -353,7 +353,7 @@ async function pindahKeKategoriBilaYatim(b) {
 }
 
 /* ---------------- Navigasi ---------------- */
-const SCREENS = ["home", "library", "search", "detail", "collection", "focus", "settings"];
+const SCREENS = ["home", "library", "search", "detail", "collection", "focus", "settings", "archive"];
 function showScreen(name) {
   if (state.currentScreen && state.currentScreen !== "detail" && name === "detail") {
     state.detailPreviousScreen = state.currentScreen;
@@ -648,6 +648,31 @@ function openFolderContextMenu(list) {
       });
     };
   });
+}
+
+/* ---------------- Layar Arsip ---------------- */
+async function openArchive() {
+  state.currentListId = null;
+  showScreen("archive");
+  const data = await apiJson("/api/bookmarks?archived=true&limit=50");
+  const items = asArray(data, "bookmarks");
+  $("#archive-count").textContent = items.length + " simpanan diarsipkan";
+  const wrap = $("#archive-items");
+  wrap.innerHTML = items.map(itemCard).join("") || `
+    <div class="empty-state">
+      ${ICONS.mascot}
+      <p>Belum ada simpanan yang diarsipkan.</p>
+    </div>`;
+  bindCards(wrap);
+}
+
+async function segarkanLabelArsip() {
+  try {
+    const data = await apiJson("/api/bookmarks?archived=true&limit=100");
+    const n = asArray(data, "bookmarks").length;
+    const btn = $("#btn-open-archive");
+    if (btn) btn.textContent = n > 0 ? `Arsip (${n})` : "Arsip";
+  } catch {}
 }
 
 /* ---------------- Sheet Koleksi Baru & Edit (Tugas 2) ---------------- */
@@ -1281,6 +1306,8 @@ async function openDetail(id) {
     } else if (state.detailPreviousScreen === "library") {
       showScreen("library");
       loadLibrary(false);
+    } else if (state.detailPreviousScreen === "archive") {
+      openArchive();
     } else {
       showScreen("home");
       loadHome();
@@ -1320,10 +1347,6 @@ async function openDetail(id) {
     const currentListId = parentList ? parentList.id : "";
     const listsHtml = `
       <div style="display:flex;flex-direction:column;gap:8px;padding:4px 0 16px">
-        <label class="sheet-menu-item" style="cursor:pointer">
-          <input type="radio" name="move_dest" value="" ${!currentListId ? "checked" : ""}>
-          <span>Tanpa koleksi</span>
-        </label>
         ${state.lists.map((l) => {
           const isCurrent = currentListId === l.id;
           const meta = parseListMeta(l);
@@ -1343,38 +1366,22 @@ async function openDetail(id) {
           closeBottomSheet();
           try {
             let deleteFailed = false;
-            if (destId) {
-              // 1. PUT ke tujuan
-              await api(`/api/lists/${destId}/bookmarks/${id}`, { method: "PUT" });
-              // 2. DELETE dari SEMUA list lain yang memuatnya
-              const toRemove = containingLists.filter((l) => l.id !== destId);
-              for (const l of toRemove) {
-                try {
-                  await api(`/api/lists/${l.id}/bookmarks/${id}`, { method: "DELETE" });
-                } catch {
-                  deleteFailed = true;
-                }
+            // 1. PUT ke tujuan
+            await api(`/api/lists/${destId}/bookmarks/${id}`, { method: "PUT" });
+            // 2. DELETE dari SEMUA list lain yang memuatnya
+            const toRemove = containingLists.filter((l) => l.id !== destId);
+            for (const l of toRemove) {
+              try {
+                await api(`/api/lists/${l.id}/bookmarks/${id}`, { method: "DELETE" });
+              } catch {
+                deleteFailed = true;
               }
-              if (deleteFailed) {
-                toast("Sebagian gagal dipindahkan, coba lagi");
-              } else {
-                const destList = state.lists.find((l) => l.id === destId);
-                toast(`Dipindahkan ke ${destList ? destList.name : "Koleksi"}`);
-              }
+            }
+            if (deleteFailed) {
+              toast("Sebagian gagal dipindahkan, coba lagi");
             } else {
-              // Tujuan Tanpa koleksi: DELETE dari SEMUA list yang memuatnya
-              for (const l of containingLists) {
-                try {
-                  await api(`/api/lists/${l.id}/bookmarks/${id}`, { method: "DELETE" });
-                } catch {
-                  deleteFailed = true;
-                }
-              }
-              if (deleteFailed) {
-                toast("Sebagian gagal dipindahkan, coba lagi");
-              } else {
-                toast("Dikeluarkan dari koleksi");
-              }
+              const destList = state.lists.find((l) => l.id === destId);
+              toast(`Dipindahkan ke ${destList ? destList.name : "Koleksi"}`);
             }
             // Segarkan cache keanggotaan dan render ulang detail
             await resolveBookmarkLists(id, true);
@@ -1631,7 +1638,8 @@ function bindEvents() {
       if (target === "home") loadHome();
     }));
 
-  $("#btn-home-see-library").addEventListener("click", () => { showScreen("library"); loadLibrary(); });
+  $("#btn-home-see-library").addEventListener("click", () => { showScreen("library"); loadLibrary(); segarkanLabelArsip(); });
+  $("#btn-open-archive").addEventListener("click", openArchive);
   $("#btn-search").addEventListener("click", openSearch);
   $("#btn-search-cancel").addEventListener("click", () => { showScreen("home"); loadHome(); });
 

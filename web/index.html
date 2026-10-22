@@ -103,10 +103,27 @@
       <h2>Perpustakaan</h2>
     </header>
     <div class="stats-panel" id="stats-panel"></div>
+    <button class="btn-secondary" id="btn-open-archive" style="width:100%;height:44px;margin-bottom:14px;font-size:14px">Arsip</button>
     <div id="tag-cloud" class="tag-cloud"></div>
     <div class="scroll-area">
       <div id="library-items" class="item-grid"></div>
       <button class="btn-loadmore" id="btn-load-more" hidden>Muat lagi</button>
+    </div>
+  </section>
+
+  <section id="screen-archive" class="screen app-screen" hidden>
+    <header class="sub-top">
+      <button class="btn-square" data-nav="library" aria-label="Kembali">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"/>
+          <polyline points="12 19 5 12 12 5"/>
+        </svg>
+      </button>
+      <h2>Arsip</h2>
+    </header>
+    <div class="scroll-area">
+      <div class="section-head"><h2 id="archive-count">0 simpanan</h2></div>
+      <div id="archive-items" class="item-grid"></div>
     </div>
   </section>
 

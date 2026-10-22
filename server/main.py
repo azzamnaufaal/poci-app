@@ -65,8 +65,8 @@ async def me(request: Request):
 
 
 @app.get("/api/bookmarks")
-async def list_bookmarks(request: Request, limit: int = 24, cursor: str | None = None):
-    params: dict = {"limit": limit}
+async def list_bookmarks(request: Request, limit: int = 24, cursor: str | None = None, archived: bool = False):
+    params: dict = {"limit": limit, "archived": archived}
     if cursor:
         params["cursor"] = cursor
     r = await karakeep(request, "GET", "/api/v1/bookmarks", params=params)
