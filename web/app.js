@@ -281,6 +281,38 @@ async function apiJson(path, opts) {
 }
 const asArray = (data, key) => (Array.isArray(data) ? data : data[key] || []);
 
+// Simpanan baru otomatis masuk antrean Focus Mode (daftar "Belum Dibuka").
+// Kegagalan di sini tidak boleh menggagalkan penyimpanan utamanya.
+async function masukBelumDibuka(bid) {
+  if (!bid) return;
+  try {
+    const fl = state.lists.find((l) => /belum dibuka/i.test(l.name));
+    const fid = state.focusListId || (fl && fl.id);
+    if (fid) await api(`/api/lists/${fid}/bookmarks/${bid}`, { method: "PUT" });
+  } catch { /* abaikan */ }
+}
+
+// Kartu Focus Mode yang dilewati (dibuka atau dilanjut) keluar dari antrean "Belum Dibuka".
+async function keluarAntrean(b) {
+  if (state.isSwipeMode || !state.focusListId) return;
+  await api(`/api/lists/${state.focusListId}/bookmarks/${b.id}`, { method: "DELETE" }).catch(() => {});
+}
+
+// Sesudah keluar antrean: bila simpanan tidak punya koleksi lain, pindah ke "Belum Ada Kategori".
+async function pindahKeKategoriBilaYatim(b) {
+  if (state.isSwipeMode || !state.focusListId) return;
+  try {
+    const kat = state.lists.find((l) => /belum ada kategori/i.test(l.name));
+    if (!kat || kat.id === state.focusListId) return;
+    for (const l of state.lists) {
+      if (l.id === state.focusListId || l.id === kat.id) continue;
+      const d = await apiJson(`/api/lists/${l.id}/bookmarks?limit=100`).catch(() => null);
+      if (d && asArray(d, "bookmarks").some((x) => x.id === b.id)) return;
+    }
+    await api(`/api/lists/${kat.id}/bookmarks/${b.id}`, { method: "PUT" });
+  } catch { /* abaikan */ }
+}
+
 /* ---------------- Navigasi ---------------- */
 const SCREENS = ["home", "library", "search", "detail", "collection", "focus", "settings"];
 function showScreen(name) {
@@ -893,6 +925,7 @@ function openCollectionMenu(list, listId) {
               const bid = created.id || created.bookmark?.id;
               if (bid) {
                 await api(`/api/lists/${listId}/bookmarks/${bid}`, { method: "PUT" });
+                await masukBelumDibuka(bid);
               }
               closeBottomSheet();
               toast("Tersimpan ke koleksi");
@@ -1489,7 +1522,9 @@ function renderFocusCard() {
     }
   };
 
-  $("#focus-next").onclick = () => {
+  $("#focus-next").onclick = async () => {
+    await keluarAntrean(b);
+    pindahKeKategoriBilaYatim(b);
     state.focusIndex++;
     renderFocusCard();
   };
@@ -1498,9 +1533,8 @@ function renderFocusCard() {
     if (c.type === "link") window.open(c.url, "_blank");
     else openDetail(b.id);
 
-    if (!state.isSwipeMode && state.focusListId) {
-      await api(`/api/lists/${state.focusListId}/bookmarks/${b.id}`, { method: "DELETE" }).catch(() => {});
-    }
+    await keluarAntrean(b);
+    pindahKeKategoriBilaYatim(b);
     state.focusIndex++;
     renderFocusCard();
   };
@@ -1553,7 +1587,11 @@ function bindEvents() {
     const url = $("#quick-save-input").value.trim();
     if (!url) return;
     const r = await api("/api/bookmarks", { method: "POST", body: JSON.stringify({ type: "link", url }) });
-    if (r.ok) { $("#quick-save-input").value = ""; toast("Tersimpan, sedang diproses"); loadHome(); }
+    if (r.ok) {
+      const created = await r.json().catch(() => null);
+      await masukBelumDibuka(created && (created.id || created.bookmark?.id));
+      $("#quick-save-input").value = ""; toast("Tersimpan, sedang diproses"); loadHome();
+    }
     else toast("Gagal menyimpan, periksa link-nya");
   });
 
