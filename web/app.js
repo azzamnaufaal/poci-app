@@ -29,7 +29,6 @@ const state = {
   focusListId: null,
   isSwipeMode: false,
   swipeTitle: "",
-  hideRecrawlSession: false,
   totalBookmarks: 0,
   favouriteCount: 0,
 };
@@ -1258,7 +1257,7 @@ async function openDetail(id) {
         ${ICONS.move}
         <span>Pindah</span>
       </button>
-      ${!state.hideRecrawlSession ? `
+      ${c.type === "link" ? `
         <button class="detail-action-tile" id="daction-recrawl">
           ${ICONS.refresh}
           <span>Segarkan</span>
@@ -1437,21 +1436,16 @@ async function openDetail(id) {
     toast("Tautan disalin");
   };
 
-  // Segarkan (recrawl)
+  // Segarkan (recrawl) - hanya dirender untuk simpanan berjenis link.
+  // Kegagalan cukup diberi toast; tombol tidak pernah disembunyikan.
   const recrawlBtn = $("#daction-recrawl");
   if (recrawlBtn) {
     recrawlBtn.onclick = async () => {
       recrawlBtn.classList.add("loading");
       try {
         const r = await api(`/api/bookmarks/${id}/recrawl`, { method: "POST" });
-        if (r.status === 404) {
-          toast("Segarkan tidak didukung versi server ini");
-          state.hideRecrawlSession = true;
-          recrawlBtn.hidden = true;
-          return;
-        }
         if (r.ok) {
-          toast("Simpanan disegarkan");
+          toast("Penyegaran dimulai, data diperbarui di latar");
           openDetail(id);
         } else {
           toast("Gagal menyegarkan");
