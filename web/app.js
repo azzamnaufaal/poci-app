@@ -415,7 +415,7 @@ async function loadHome() {
   const isiKoleksi = {};
   await Promise.all(shown.map(async (l) => {
     try {
-      const d = await apiJson(`/api/lists/${l.id}/bookmarks?limit=200`);
+      const d = await apiJson(`/api/lists/${l.id}/bookmarks?limit=100`);
       const n = asArray(d, "bookmarks").length;
       isiKoleksi[l.id] = d && d.nextCursor ? `${n}+` : `${n}`;
     } catch { isiKoleksi[l.id] = null; }
