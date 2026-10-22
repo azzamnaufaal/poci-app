@@ -5,7 +5,7 @@
    tipografi Archivo hierarkis dan konsisten. */
 
 :root {
-  --bg: #F9F9F9;
+  --bg: #F4F0E8;
   --surface: #FFFFFF;
   --ink: #1D1B16;
   --muted: #6E6E66;
@@ -45,17 +45,22 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-tap-highlight-color: rgba(254, 210, 100, 0.2);
 }
 
 html, body {
   height: 100%;
+  /* iOS: cegah pull-to-refresh bawaan bentrok dengan scroll app */
+  overscroll-behavior-y: contain;
 }
 
 body {
   background: var(--bg);
   color: var(--ink);
-  font-family: "Archivo", system-ui, sans-serif;
+  font-family: "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  /* iOS Dynamic Island: beri ruang di atas agar header tidak tertutup notch */
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 button {
@@ -63,6 +68,19 @@ button {
   cursor: pointer;
   border: none;
   background: none;
+  transition: transform 120ms ease, opacity 120ms ease;
+}
+
+/* Tap feedback: tombol dan kartu menyusut sedikit saat disentuh */
+button:active, .folder-card:active, .item-card:active {
+  transform: scale(0.96);
+  opacity: 0.85;
+}
+
+/* Focus yang jelas untuk keyboard navigation */
+button:focus-visible, input:focus-visible {
+  outline: 3px solid rgba(254, 210, 100, 0.6);
+  outline-offset: 2px;
 }
 
 input {
@@ -304,12 +322,17 @@ input {
   color: var(--ink);
 }
 
-/* ---------- Beranda ---------- */
+/* Radius konsisten:
+   - 8px: badge, tag, chip kecil
+   - 12px: button, input, card medium
+   - 16px: card besar, modal, stats panel */
 .home-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+  /* iPhone Dynamic Island: header tidak boleh terlalu dekat notch */
+  padding-top: calc(8px + env(safe-area-inset-top, 0px));
 }
 
 .home-top-right {
@@ -673,6 +696,8 @@ input {
   align-items: center;
   gap: 14px;
   margin-bottom: 20px;
+  /* iPhone Dynamic Island: beri ruang di atas */
+  padding-top: calc(8px + env(safe-area-inset-top, 0px));
 }
 
 .sub-top h2 {
@@ -1752,6 +1777,8 @@ input {
   gap: 10px;
   align-items: center;
   margin-bottom: 16px;
+  /* iPhone Dynamic Island: beri ruang di atas */
+  padding-top: calc(8px + env(safe-area-inset-top, 0px));
 }
 
 .search-input-wrap {
