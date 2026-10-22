@@ -20,15 +20,15 @@
 }
 
 [data-theme="dark"] {
-  --bg: #161613;
-  --surface: #201F1B;
+  --bg: #000000;
+  --surface: #0B0B0B;
   --ink: #F5F2EA;
   --muted: #9E9C94;
-  --cream: #28261F;
-  --line: #3A382F;
+  --cream: #121210;
+  --line: #2C2B26;
   --mint: #2C4029;
   --yellow: #E5BE57;
-  --folder-paper: #2C2B25;
+  --folder-paper: #151513;
   --shadow-card: 3px 3px 0 rgba(0, 0, 0, 0.7);
   --shadow-btn: 3px 3px 0 rgba(0, 0, 0, 0.7);
 }
