@@ -656,6 +656,23 @@ async function openArchive() {
   showScreen("archive");
   const data = await apiJson("/api/bookmarks?archived=true&limit=50");
   const items = asArray(data, "bookmarks");
+  // Sembuhkan data lama: simpanan terarsip tidak boleh punya koleksi.
+  try {
+    const perList = await Promise.all((state.lists || []).map(async (l) => {
+      try {
+        const d = await apiJson(`/api/lists/${l.id}/bookmarks?limit=100`);
+        return { list: l, ids: new Set(asArray(d, "bookmarks").map((x) => x.id)) };
+      } catch { return null; }
+    }));
+    for (const item of items) {
+      for (const entry of perList) {
+        if (entry && entry.ids.has(item.id)) {
+          try { await api(`/api/lists/${entry.list.id}/bookmarks/${item.id}`, { method: "DELETE" }); } catch {}
+          if (state.membershipCache) state.membershipCache.delete(item.id);
+        }
+      }
+    }
+  } catch {}
   $("#archive-count").textContent = items.length + " simpanan diarsipkan";
   const wrap = $("#archive-items");
   wrap.innerHTML = items.map(itemCard).join("") || `
@@ -1383,6 +1400,14 @@ async function openDetail(id) {
               const destList = state.lists.find((l) => l.id === destId);
               toast(`Dipindahkan ke ${destList ? destList.name : "Koleksi"}`);
             }
+            // Memilih koleksi dari dalam Arsip otomatis mengeluarkan dari arsip
+            if (b.archived) {
+              try {
+                await api("/api/bookmarks/" + id, { method: "PATCH", body: JSON.stringify({ archived: false }) });
+                b.archived = false;
+                toast("Dipindahkan dan dikeluarkan dari arsip");
+              } catch {}
+            }
             // Segarkan cache keanggotaan dan render ulang detail
             await resolveBookmarkLists(id, true);
             openDetail(id);
@@ -1448,11 +1473,40 @@ async function openDetail(id) {
     else { showScreen("home"); loadHome(); }
   };
 
-  // Arsipkan
+  // Arsipkan / keluarkan dari arsip.
+  // Aturan user 22 Okt 2026: mengarsipkan mengeluarkan simpanan dari SEMUA koleksi
+  // (arsip berada di luar sistem folder); mengeluarkan dari arsip menaruh simpanan
+  // ke folder Tanpa Kategori bila ia tidak berkoleksi.
   $("#detail-archive").onclick = async () => {
-    await api("/api/bookmarks/" + id, { method: "PATCH", body: JSON.stringify({ archived: !b.archived }) });
-    toast(b.archived ? "Dikeluarkan dari arsip" : "Diarsipkan");
-    openDetail(id);
+    if (!b.archived) {
+      let gagal = false;
+      for (const l of containingLists) {
+        try {
+          await api(`/api/lists/${l.id}/bookmarks/${id}`, { method: "DELETE" });
+        } catch { gagal = true; }
+      }
+      try {
+        await api("/api/bookmarks/" + id, { method: "PATCH", body: JSON.stringify({ archived: true }) });
+      } catch { gagal = true; }
+      if (state.membershipCache) state.membershipCache.delete(id);
+      toast(gagal ? "Sebagian gagal diarsipkan, coba lagi" : "Diarsipkan dan dikeluarkan dari semua koleksi");
+      $("#detail-back-btn").click();
+    } else {
+      await api("/api/bookmarks/" + id, { method: "PATCH", body: JSON.stringify({ archived: false }) });
+      let pesan = "Dikeluarkan dari arsip";
+      if (!containingLists.length) {
+        const kat = state.lists.find((l) => /belum ada kategori|tanpa kategori/i.test(l.name));
+        if (kat) {
+          try {
+            await api(`/api/lists/${kat.id}/bookmarks/${id}`, { method: "PUT" });
+            pesan = "Dikeluarkan dari arsip ke Tanpa Kategori";
+          } catch {}
+        }
+      }
+      if (state.membershipCache) state.membershipCache.delete(id);
+      toast(pesan);
+      $("#detail-back-btn").click();
+    }
   };
 
   // Tambah & Lepas Tag
