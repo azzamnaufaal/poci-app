@@ -8,7 +8,7 @@ const $ = (sel) => document.querySelector(sel);
 const FOLDER_COLORS = ["#FE6A73", "#B6DE48", "#FED264", "#9AD1F5", "#F6A6D7", "#FFC38A", "#A8E6B8", "#C9B8F5"];
 const TAG_COLORS = ["#FED264", "#B6DE48", "#F6A6D7", "#9AD1F5", "#FFC38A", "#A8E6B8", "#FE6A73", "#C9B8F5"];
 
-// 16 Swatch warna untuk Sheet Koleksi Baru (Tugas 2)
+// 16 swatch warna untuk sheet Koleksi Baru
 const SWATCH_COLORS = [
   "#F56476", "#FED264", "#B6DE48", "#7FB6D9",
   "#C3A6E8", "#F2A65A", "#8FD0C5", "#E88BB0",
@@ -33,7 +33,7 @@ const state = {
   favouriteCount: 0,
 };
 
-/* ---------------- 43 Ikon Koleksi SVG (Tugas 2, diperbanyak 22 Okt) ---------------- */
+/* 43 ikon koleksi SVG */
 const ICON_SVGS = {
   folder: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>`,
   star: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
@@ -80,7 +80,7 @@ const ICON_SVGS = {
   home: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
 };
 
-/* ---------------- Ikon UI Antarmuka ---------------- */
+/* Ikon UI Antarmuka */
 const ICONS = {
   arrowLeft: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>`,
   arrowRight: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>`,
@@ -98,7 +98,7 @@ const ICONS = {
   mascot: `<svg width="44" height="44" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="poci-mascot"><path d="M10 20h28v14a8 8 0 0 1-8 8H18a8 8 0 0 1-8-8V20Z"/><path d="M14 20c0-6 4-10 10-10s10 4 10 10"/><circle cx="24" cy="7" r="2" fill="currentColor"/><path d="M38 24h4a4 4 0 0 1 4 4v2a4 4 0 0 1-4 4h-4"/><path d="M10 26l-6-4v-2l6 2"/><circle cx="20" cy="28" r="1.5" fill="currentColor"/><circle cx="28" cy="28" r="1.5" fill="currentColor"/><path d="M22 33c1 1 3 1 4 0"/></svg>`,
 };
 
-/* ---------------- Peta Kunci Ikon ke Emoji (Tugas A) ---------------- */
+/* Peta Kunci Ikon ke Emoji */
 const ICON_EMOJIS = {
   folder: "📁",
   star: "⭐",
@@ -161,7 +161,7 @@ function buildListDescription(existingDesc, iconKey, colorHex) {
   return [pociLine, ...lines].join("\n");
 }
 
-/* ---------------- Parser Metadata Koleksi (Tugas A & Tugas 2) ---------------- */
+/* Parser Metadata Koleksi */
 function parseListMeta(list, index = 0) {
   // Prioritas 1: baris pertama description berawalan poci: (skema baru)
   if (list && list.description) {
@@ -202,7 +202,7 @@ function parseListMeta(list, index = 0) {
   return { iconKey, color, svg: ICON_SVGS[iconKey] || ICON_SVGS.folder };
 }
 
-/* ---------------- Pembersihan Judul & Deskripsi Media Sosial (Tugas 8) ---------------- */
+/* Pembersihan Judul & Deskripsi Media Sosial */
 function judulBersih(b, isDetail = false) {
   const c = b.content || {};
   const rawTitle = String(b.title || c.title || (c.type === "asset" ? c.fileName : null) || c.url || "Tanpa judul").trim();
@@ -254,7 +254,7 @@ function deskripsiBersih(b) {
   return desc || b.summary || "";
 }
 
-/* ---------------- Tema ---------------- */
+/* Tema */
 function applyTheme(choice) {
   const dark = choice === "dark" || (choice === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
   document.documentElement.dataset.theme = dark ? "dark" : "light";
@@ -271,7 +271,7 @@ function initTheme() {
     }));
 }
 
-/* ---------------- Util ---------------- */
+/* Util */
 function toast(msg) {
   const el = $("#toast");
   el.textContent = msg;
@@ -305,7 +305,7 @@ function formatDateTime(iso) {
   return `${day} ${m} ${y} · ${hh}.${mm}`;
 }
 
-/* ---------------- API ---------------- */
+/* API */
 async function api(path, opts = {}) {
   const r = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
   if (r.status === 401) { showLogin(); throw new Error("unauthorized"); }
@@ -351,7 +351,7 @@ async function pindahKeKategoriBilaYatim(b) {
   } catch { /* abaikan */ }
 }
 
-/* ---------------- Navigasi ---------------- */
+/* Navigasi */
 const SCREENS = ["home", "library", "search", "detail", "collection", "focus", "settings", "archive"];
 function showScreen(name) {
   if (state.currentScreen && state.currentScreen !== "detail" && name === "detail") {
@@ -368,7 +368,7 @@ function showLogin() {
   $("#screen-login").hidden = false;
 }
 
-/* ---------------- Bottom Sheet Generik (Tugas 2, 4, 5, 7) ---------------- */
+/* Bottom Sheet Generik */
 function showBottomSheet(title, bodyHtml, onRendered) {
   const sheet = $("#bottom-sheet");
   $("#sheet-title").textContent = title;
@@ -389,7 +389,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeBottomSheet();
 });
 
-/* ---------------- Kartu Simpanan (Ringan & Bersih) ---------------- */
+/* Kartu Simpanan (Ringan & Bersih) */
 function cardImage(b) {
   const c = b.content || {};
   if (c.type === "asset" && c.assetId) return "/api/assets/" + c.assetId;
@@ -460,7 +460,7 @@ function sesuaikanUkuranNamaFolder() {
   });
 }
 
-/* ---------------- Beranda (Tugas 1 & 3) ---------------- */
+/* Beranda */
 async function loadHome() {
   const listsData = await apiJson("/api/lists");
   state.lists = asArray(listsData, "lists");
@@ -527,7 +527,7 @@ async function loadHome() {
   }
 }
 
-/* ---------------- Tahan-Lama & Klik Folder (Tugas 7) ---------------- */
+/* Tahan-Lama & Klik Folder */
 function bindFolderCards(container) {
   container.querySelectorAll(".folder-card").forEach((card) => {
     const listId = card.dataset.list;
@@ -649,7 +649,7 @@ function openFolderContextMenu(list) {
   });
 }
 
-/* ---------------- Layar Arsip ---------------- */
+/* Layar Arsip */
 async function openArchive() {
   state.currentListId = null;
   showScreen("archive");
@@ -691,7 +691,7 @@ async function segarkanLabelArsip() {
   } catch {}
 }
 
-/* ---------------- Sheet Koleksi Baru & Edit (Tugas 2) ---------------- */
+/* Sheet Koleksi Baru & Edit */
 function openCollectionSheet(existingList = null) {
   const isEdit = !!existingList;
   const initialMeta = isEdit ? parseListMeta(existingList) : { iconKey: "folder", color: SWATCH_COLORS[0] };
@@ -815,7 +815,7 @@ function openCollectionSheet(existingList = null) {
   });
 }
 
-/* ---------------- Perpustakaan ---------------- */
+/* Perpustakaan */
 async function loadLibrary(reset = true) {
   if (reset) { state.libraryCursor = null; $("#library-items").innerHTML = ""; }
   const q = "/api/bookmarks?limit=24" + (state.libraryCursor ? "&cursor=" + encodeURIComponent(state.libraryCursor) : "");
@@ -838,7 +838,7 @@ async function loadLibrary(reset = true) {
     </div>
     <div class="stat">
       <span class="stat-icon">${ICONS.bookmark}</span>
-      <b>${items.length}+</b>
+      <b>${state.totalBookmarks}</b>
       <span>Simpanan</span>
     </div>
     <div class="stat">
@@ -857,7 +857,7 @@ async function loadLibrary(reset = true) {
     }));
 }
 
-/* ---------------- Pencarian (Tugas 6) ---------------- */
+/* Pencarian */
 async function openSearch() {
   showScreen("search");
   const input = $("#search-input");
@@ -941,11 +941,11 @@ async function runSearch(q) {
       </div>`;
     bindCards(wrap);
   } catch {
-    wrap.innerHTML = `<div class="empty-state"><p>Gagal mencari.</p></div>`;
+    wrap.innerHTML = `<div class="empty-state"><p>Gagal mencari. Periksa koneksimu, lalu coba lagi.</p></div>`;
   }
 }
 
-/* ---------------- Layar Koleksi Berfitur & Mode Geser (Tugas 4) ---------------- */
+/* Layar Koleksi Berfitur & Mode Geser */
 async function openCollection(listId) {
   state.currentListId = listId;
   state.isSelecting = false;
@@ -984,13 +984,11 @@ function renderCollectionGrid() {
     </div>`;
   bindCards(wrap);
 
-  // Tombol mode geser
   $("#btn-collection-swipe").onclick = () => {
     if (items.length === 0) { toast("Koleksi ini kosong"); return; }
     openSwipeMode(items, list ? list.name : "Koleksi");
   };
 
-  // Tombol menu titik tiga
   $("#btn-collection-menu").onclick = () => openCollectionMenu(list, listId);
 }
 
@@ -1107,7 +1105,6 @@ function openCollectionMenu(list, listId) {
   });
 }
 
-// Tombol pada selection bar di bawah
 $("#btn-select-remove").onclick = async () => {
   const ids = Array.from(state.selectedBookmarks);
   if (ids.length === 0) { toast("Pilih simpanan dulu"); return; }
@@ -1142,7 +1139,7 @@ $("#btn-select-done").onclick = () => {
   renderCollectionGrid();
 };
 
-/* ---------------- Mode Geser Koleksi (Tugas 4 & 9) ---------------- */
+/* Mode Geser Koleksi */
 function openSwipeMode(items, title) {
   state.isSwipeMode = true;
   state.swipeTitle = title;
@@ -1152,7 +1149,7 @@ function openSwipeMode(items, title) {
   renderFocusCard();
 }
 
-/* ---------------- Resolver Keanggotaan Koleksi Nyata (Tugas E) ---------------- */
+/* Resolver Keanggotaan Koleksi Nyata */
 async function resolveBookmarkLists(bookmarkId, forceRefresh = false) {
   if (!state.membershipCache) state.membershipCache = new Map();
   if (!forceRefresh && state.membershipCache.has(bookmarkId)) {
@@ -1180,7 +1177,7 @@ async function resolveBookmarkLists(bookmarkId, forceRefresh = false) {
   return containingLists;
 }
 
-/* ---------------- Layar Detail Kaya Aksi (Tugas 5 & Tugas E) ---------------- */
+/* Layar Detail Kaya Aksi */
 async function openDetail(id) {
   showScreen("detail");
   const wrap = $("#screen-detail");
@@ -1196,13 +1193,12 @@ async function openDetail(id) {
   const c = b.content || {};
   const img = cardImage(b);
 
-  // Koleksi bookmark ini (Tugas E: keanggotaan nyata)
+  // Koleksi pemilik bookmark ini, dari keanggotaan nyata di API
   const parentList = containingLists[0] || null;
   const listMeta = parentList ? parseListMeta(parentList) : null;
   const listChipText = parentList ? esc(parentList.name) : "Tanpa koleksi";
   const listChipDot = parentList ? `<span class="chip-collection-dot" style="background:${listMeta.color}"></span>` : "";
 
-  // Tag list
   const tagsHtml = (b.tags || []).map((t) => `
     <span class="price-tag tag-pill-removable" style="background:#FED264">
       <span class="price-tag-hole"></span>
@@ -1313,7 +1309,6 @@ async function openDetail(id) {
         <p style="white-space:pre-wrap">${esc(c.text || "")}</p>
       </div>` : ""}`;
 
-  // Kembali
   $("#detail-back-btn").onclick = () => {
     if (state.currentListId) {
       openCollection(state.currentListId);
@@ -1330,7 +1325,7 @@ async function openDetail(id) {
     }
   };
 
-  // Edit judul sebaris (Tugas 5)
+  // Edit judul sebaris
   const titleTextEl = $("#detail-title-text");
   const editorEl = $("#detail-title-editor");
   const pencilBtn = $("#detail-pencil-btn");
@@ -1358,7 +1353,7 @@ async function openDetail(id) {
     }
   };
 
-  // Pindah koleksi (chip meta & aksi Pindah - Tugas E)
+  // Pindah koleksi (chip meta dan aksi Pindah)
   const handleMove = () => {
     const currentListId = parentList ? parentList.id : "";
     const listsHtml = `
@@ -1382,9 +1377,8 @@ async function openDetail(id) {
           closeBottomSheet();
           try {
             let deleteFailed = false;
-            // 1. PUT ke tujuan
+            // Pindah = PUT ke tujuan, lalu DELETE dari semua list lain yang memuatnya
             await api(`/api/lists/${destId}/bookmarks/${id}`, { method: "PUT" });
-            // 2. DELETE dari SEMUA list lain yang memuatnya
             const toRemove = containingLists.filter((l) => l.id !== destId);
             for (const l of toRemove) {
               try {
@@ -1421,7 +1415,6 @@ async function openDetail(id) {
   $("#detail-chip-col-btn").onclick = handleMove;
   $("#daction-move").onclick = handleMove;
 
-  // Bagikan
   $("#daction-share").onclick = async () => {
     const shareTitle = judulBersih(b);
     const shareUrl = c.url || window.location.href;
@@ -1458,7 +1451,6 @@ async function openDetail(id) {
     };
   }
 
-  // Hapus
   $("#daction-delete").onclick = async () => {
     if (!confirm("Hapus simpanan ini?")) return;
     await api("/api/bookmarks/" + id, { method: "DELETE" });
@@ -1559,7 +1551,7 @@ async function openDetail(id) {
   };
 }
 
-/* ---------------- Focus Mode & Mode Geser (Tugas 4 & 9) ---------------- */
+/* Focus Mode & Mode Geser */
 async function openFocus() {
   state.isSwipeMode = false;
   state.swipeTitle = "";
@@ -1667,7 +1659,7 @@ function renderFocusCard() {
   };
 }
 
-/* ---------------- Acara Global ---------------- */
+/* Acara Global */
 function bindEvents() {
   $("#login-form").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -1723,13 +1715,13 @@ function bindEvents() {
     else toast("Gagal menyimpan, periksa link-nya");
   });
 
-  // Tombol buat koleksi baru -> Buka Sheet Koleksi Baru (Tugas 2)
+  // Tombol buat koleksi baru -> Buka Sheet Koleksi Baru
   $("#btn-new-collection").addEventListener("click", () => {
     openCollectionSheet(null);
   });
 }
 
-/* ---------------- Mulai ---------------- */
+/* Mulai */
 (async function init() {
   initTheme();
   bindEvents();

@@ -13,6 +13,8 @@
   --mint: #CDEAC0;
   --cream: #FFF6DC;
   --line: #26221C;
+  --danger: #C62F3B;
+  --focus-ring: #26221C;
   --radius: 16px;
   --folder-paper: #FFFFFF;
   --shadow-card: 3px 3px 0 var(--line);
@@ -26,6 +28,8 @@
   --muted: #9E9C94;
   --cream: #121210;
   --line: #2C2B26;
+  --danger: #FF8A94;
+  --focus-ring: rgba(254, 210, 100, 0.6);
   --mint: #2C4029;
   --yellow: #E5BE57;
   --folder-paper: #151513;
@@ -79,12 +83,18 @@ button:active, .folder-card:active, .item-card:active {
 
 /* Focus yang jelas untuk keyboard navigation */
 button:focus-visible, input:focus-visible {
-  outline: 3px solid rgba(254, 210, 100, 0.6);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
 input {
   font-family: inherit;
+}
+
+/* Placeholder memakai warna redup yang lolos kontras, bukan abu bawaan browser */
+input::placeholder, textarea::placeholder {
+  color: var(--muted);
+  opacity: 1;
 }
 
 [hidden] {
@@ -123,7 +133,7 @@ input {
   }
 }
 
-/* ---------- Login ---------- */
+/* Login */
 #screen-login {
   align-items: center;
   justify-content: center;
@@ -182,13 +192,13 @@ input {
 }
 
 .error-text {
-  color: #C62F3B;
+  color: var(--danger);
   font-weight: 700;
   font-size: 13px;
   margin-top: 10px;
 }
 
-/* ---------- Tombol Dasar ---------- */
+/* Tombol Dasar */
 .btn-primary {
   background: var(--yellow);
   color: #1D1B16;
@@ -270,13 +280,13 @@ input {
 }
 
 .btn-danger-text {
-  color: #C62F3B;
+  color: var(--danger);
 }
 
 .btn-danger {
   background: var(--surface);
-  color: #C62F3B;
-  border: 1.5px solid #C62F3B;
+  color: var(--danger);
+  border: 1.5px solid var(--danger);
   border-radius: 12px;
   padding: 12px 20px;
   font-weight: 800;
@@ -295,6 +305,7 @@ input {
   border: 1.5px solid var(--line);
   border-radius: 12px;
   padding: 10px 18px;
+  min-height: 44px;
   font-weight: 700;
   font-size: 14px;
   margin: 20px auto;
@@ -311,6 +322,10 @@ input {
 .link-btn {
   background: none;
   border: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 4px;
   font-weight: 600;
   font-size: 13px;
   color: var(--muted);
@@ -468,7 +483,7 @@ input {
   font-size: 13px;
 }
 
-/* ---------- Khusus: Geometri Bentuk Folder Vektor SVG (Tugas 1) ---------- */
+/* Khusus: Geometri Bentuk Folder Vektor SVG */
 .folder-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -587,7 +602,7 @@ input {
   overflow: hidden;
 }
 
-/* ---------- Kartu Simpanan (Ringan & Bersih) ---------- */
+/* Kartu Simpanan (Ringan & Bersih) */
 .item-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -690,7 +705,7 @@ input {
   text-overflow: ellipsis;
 }
 
-/* ---------- Kepala Layar Turunan ---------- */
+/* Kepala Layar Turunan */
 .sub-top {
   display: flex;
   align-items: center;
@@ -713,7 +728,7 @@ input {
   min-height: 0;
 }
 
-/* ---------- Perpustakaan ---------- */
+/* Perpustakaan */
 /* Panel statistik kuning (satu-satunya blok warna besar di perpustakaan) */
 .stats-panel {
   background: var(--yellow);
@@ -808,7 +823,7 @@ input {
   line-height: 1.2;
 }
 
-/* ---------- Detail Simpanan ---------- */
+/* Detail Simpanan */
 .detail-photo-wrap {
   width: calc(100% + 40px);
   margin: 0 -20px 16px -20px;
@@ -901,7 +916,7 @@ input {
   transform: translateY(1px);
 }
 
-/* ---------- Pencarian ---------- */
+/* Pencarian */
 .search-bar {
   display: flex;
   gap: 10px;
@@ -931,7 +946,7 @@ input {
   padding: 0 20px;
 }
 
-/* ---------- Pengaturan ---------- */
+/* Pengaturan */
 .settings-list {
   display: flex;
   flex-direction: column;
@@ -983,7 +998,8 @@ input {
   color: var(--muted);
   border: none;
   border-radius: 999px;
-  padding: 6px 12px;
+  padding: 6px 14px;
+  min-height: 44px;
   font-weight: 700;
   font-size: 12.5px;
   cursor: pointer;
@@ -995,7 +1011,7 @@ input {
   color: #1D1B16;
 }
 
-/* ---------- Focus Mode ---------- */
+/* Focus Mode */
 .focus-screen {
   background: #0E0E0E;
   color: #F5F2EA;
@@ -1003,7 +1019,7 @@ input {
   max-width: 500px;
   margin: 0 auto;
   width: 100%;
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -1186,7 +1202,7 @@ input {
   margin: 8px 0 20px;
 }
 
-/* ---------- Toast ---------- */
+/* Toast */
 .toast {
   position: fixed;
   left: 50%;
@@ -1205,7 +1221,7 @@ input {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-/* ---------- Empty State & Mascot ---------- */
+/* Empty State & Mascot */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -1230,7 +1246,7 @@ input {
   opacity: 0.85;
 }
 
-/* ---------- Bottom Sheet Generik (Tugas 2, 4, 5, 7) ---------- */
+/* Bottom Sheet Generik */
 .sheet-backdrop {
   position: fixed;
   inset: 0;
@@ -1291,7 +1307,7 @@ input {
   border: none;
   color: var(--muted);
   cursor: pointer;
-  padding: 6px;
+  padding: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1463,14 +1479,14 @@ input {
 }
 
 .sheet-menu-item.danger {
-  color: #E4572E;
+  color: var(--danger);
 }
 
 .sheet-menu-item.danger:hover {
-  background: rgba(228, 87, 46, 0.1);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
 }
 
-/* ---------- Layar Koleksi Berfitur (Tugas 4) ---------- */
+/* Layar Koleksi Berfitur */
 .collection-header {
   display: flex;
   justify-content: space-between;
@@ -1555,7 +1571,7 @@ input {
   outline: 2px solid var(--yellow);
 }
 
-/* ---------- Layar Detail Kaya Aksi (Tugas 5) ---------- */
+/* Layar Detail Kaya Aksi */
 .detail-title-wrap {
   display: flex;
   align-items: flex-start;
@@ -1711,7 +1727,7 @@ input {
 }
 
 .detail-action-tile.danger {
-  color: #E4572E;
+  color: var(--danger);
 }
 
 .detail-action-tile.loading svg {
@@ -1771,7 +1787,7 @@ input {
   border-color: var(--ink);
 }
 
-/* ---------- Layar Cari Dibuka dengan Isi Pustaka (Tugas 6) ---------- */
+/* Layar Cari Dibuka dengan Isi Pustaka */
 .search-top {
   display: flex;
   gap: 10px;
