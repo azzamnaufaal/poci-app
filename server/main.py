@@ -2,18 +2,21 @@
 
 Tugasnya cuma tiga:
 1. Menyimpan API key Karakeep di sisi server (tidak pernah sampai ke browser).
-2. Menyediakan login sederhana untuk Poci sendiri (pola CreatorOS Web v2).
+2. Menyediakan login Poci sendiri: OAuth Google sebagai jalur utama dan
+   password .env sebagai cadangan selama transisi.
 3. Meneruskan panggilan frontend ke REST API Karakeep dan sebaliknya.
 
 Semua data simpanan tetap milik Karakeep; Poci tidak menyimpan salinan data.
 """
 
 import os
+import secrets
 from pathlib import Path
 
 import httpx
+from authlib.integrations.starlette_client import OAuth
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -22,12 +25,50 @@ KARAKEEP_PUBLIC_URL = os.environ.get("KARAKEEP_PUBLIC_URL", "http://ai-core:3000
 KARAKEEP_API_KEY = os.environ.get("KARAKEEP_API_KEY", "")
 POCI_USERNAME = os.environ.get("POCI_USERNAME", "")
 POCI_PASSWORD = os.environ.get("POCI_PASSWORD", "")
-SESSION_SECRET = os.environ.get("SESSION_SECRET", "ganti-di-env")
+SESSION_SECRET = os.environ.get("SESSION_SECRET", "")
+if not SESSION_SECRET or SESSION_SECRET == "ganti-di-env":
+    raise RuntimeError(
+        "SESSION_SECRET belum diisi di .env atau masih nilai bawaan. "
+        "Isi dengan string acak panjang (openssl rand -hex 32) sebelum server dijalankan."
+    )
+
+# Login Google (OAuth/OIDC). Client ID dan secret dibuat di Google Cloud Console;
+# redirect URI yang didaftarkan di sana harus sama persis dengan GOOGLE_REDIRECT_URI.
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+GOOGLE_ALLOWED_EMAIL = os.environ.get("GOOGLE_ALLOWED_EMAIL", "").strip().lower()
+GOOGLE_REDIRECT_URI = os.environ.get(
+    "GOOGLE_REDIRECT_URI", "https://poci.ruangkendali.ai.id/auth/google/callback"
+)
+GOOGLE_ENABLED = bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
+
+# Login password .env adalah cadangan selama transisi ke Google.
+# Matikan lewat POCI_PASSWORD_LOGIN=off sesudah login Google terbukti jalan.
+PASSWORD_LOGIN_ENABLED = os.environ.get("POCI_PASSWORD_LOGIN", "on").strip().lower() != "off"
+
+# Cookie sesi hanya dikirim lewat HTTPS (browser selalu melihat Poci lewat HTTPS
+# Cloudflare). Set SESSION_COOKIE_HTTPS_ONLY=0 hanya untuk uji lokal lewat HTTP.
+SESSION_COOKIE_HTTPS_ONLY = os.environ.get("SESSION_COOKIE_HTTPS_ONLY", "1").strip() != "0"
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 
 app = FastAPI(title="Poci")
-app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, max_age=60 * 60 * 24 * 30)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=SESSION_SECRET,
+    max_age=60 * 60 * 24 * 30,
+    https_only=SESSION_COOKIE_HTTPS_ONLY,
+)
+
+oauth = OAuth()
+if GOOGLE_ENABLED:
+    oauth.register(
+        name="google",
+        client_id=GOOGLE_CLIENT_ID,
+        client_secret=GOOGLE_CLIENT_SECRET,
+        server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+        client_kwargs={"scope": "openid email profile"},
+    )
 
 
 def require_login(request: Request) -> None:
@@ -45,11 +86,45 @@ async def karakeep(request: Request, method: str, path: str, **kwargs) -> httpx.
 
 @app.post("/auth/login")
 async def login(request: Request):
+    if not PASSWORD_LOGIN_ENABLED:
+        raise HTTPException(status_code=403, detail="Login password sedang dimatikan")
     body = await request.json()
-    if body.get("username") == POCI_USERNAME and body.get("password") == POCI_PASSWORD and POCI_PASSWORD:
+    username_ok = secrets.compare_digest(str(body.get("username", "")), POCI_USERNAME)
+    password_ok = secrets.compare_digest(str(body.get("password", "")), POCI_PASSWORD)
+    if username_ok and password_ok and POCI_PASSWORD:
         request.session["user"] = POCI_USERNAME
         return {"ok": True}
     raise HTTPException(status_code=401, detail="Username atau password salah")
+
+
+@app.get("/auth/config")
+async def auth_config():
+    # Hanya saklar tampilan layar login, aman dibaca tanpa login.
+    return {"google": GOOGLE_ENABLED, "password_login": PASSWORD_LOGIN_ENABLED}
+
+
+@app.get("/auth/google/login")
+async def google_login(request: Request):
+    if not GOOGLE_ENABLED:
+        raise HTTPException(status_code=404, detail="Login Google belum dikonfigurasi")
+    return await oauth.google.authorize_redirect(request, GOOGLE_REDIRECT_URI)
+
+
+@app.get("/auth/google/callback")
+async def google_callback(request: Request):
+    if not GOOGLE_ENABLED:
+        raise HTTPException(status_code=404, detail="Login Google belum dikonfigurasi")
+    try:
+        token = await oauth.google.authorize_access_token(request)
+    except Exception:
+        return RedirectResponse(url="/?error=login-gagal")
+    userinfo = token.get("userinfo") or {}
+    email = str(userinfo.get("email", "")).strip().lower()
+    # Hanya satu email pemilik yang boleh masuk, dan wajib terverifikasi Google.
+    if not email or userinfo.get("email_verified") is not True or email != GOOGLE_ALLOWED_EMAIL:
+        return RedirectResponse(url="/?error=email-tidak-diizinkan")
+    request.session["user"] = email
+    return RedirectResponse(url="/")
 
 
 @app.post("/auth/logout")

@@ -1721,10 +1721,30 @@ function bindEvents() {
   });
 }
 
+/* Susun layar login mengikuti konfigurasi server: tombol Google dan form
+   password hanya tampil bila masing-masing aktif di .env */
+async function aturLayarLogin() {
+  try {
+    const cfg = await (await fetch("/auth/config")).json();
+    if (!cfg.google) { $("#btn-google-login").hidden = true; $("#login-divider").hidden = true; }
+    if (!cfg.password_login) { $("#login-form").hidden = true; $("#login-divider").hidden = true; }
+  } catch { /* abaikan: tampilkan semua pilihan */ }
+}
+
 /* Mulai */
 (async function init() {
   initTheme();
   bindEvents();
+  aturLayarLogin();
+  const err = new URLSearchParams(location.search).get("error");
+  if (err) {
+    history.replaceState(null, "", location.pathname);
+    const el = $("#login-error");
+    el.hidden = false;
+    el.textContent = err === "email-tidak-diizinkan"
+      ? "Email Google itu tidak terdaftar sebagai pemilik Poci."
+      : "Login Google gagal, coba lagi.";
+  }
   try {
     await apiJson("/auth/me");
     showScreen("home");
