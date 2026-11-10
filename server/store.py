@@ -199,20 +199,28 @@ def create_pairing_code(conn, user_id, code, device_name, ttl_seconds=600):
 
 
 def redeem_pairing_code(conn, code):
+    """Klaim pairing code atomik; pemanggil menyimpan perangkat di transaksi sama."""
+    conn.execute("BEGIN IMMEDIATE")
     row = conn.execute(
         "SELECT * FROM pairing_codes WHERE code_hash = ? AND used_at IS NULL",
         (hash_token(code),),
     ).fetchone()
     if not row:
+        conn.rollback()
         return None
     rec = dict(row)
-    if rec["expires_at"] < time.time():
+    now = time.time()
+    if rec["expires_at"] <= now:
+        conn.rollback()
         return None
-    conn.execute(
-        "UPDATE pairing_codes SET used_at = ? WHERE id = ?",
-        (time.time(), rec["id"]),
+    claimed = conn.execute(
+        "UPDATE pairing_codes SET used_at = ?"
+        " WHERE id = ? AND used_at IS NULL AND expires_at > ?",
+        (now, rec["id"], now),
     )
-    conn.commit()
+    if claimed.rowcount != 1:
+        conn.rollback()
+        return None
     return rec
 
 
@@ -224,7 +232,6 @@ def create_device(conn, user_id, device_name):
         " VALUES (?, ?, ?, ?, ?)",
         (dev_id, user_id, device_name, hash_token(token), time.time()),
     )
-    conn.commit()
     return dev_id, token
 
 

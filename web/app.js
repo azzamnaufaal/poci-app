@@ -164,6 +164,11 @@ function isManualList(l) {
 async function api(path, opts = {}) {
   const r = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
   if (r.status === 401) { tampilkanLogin(); throw new Error("unauthorized"); }
+  if (!r.ok) {
+    const error = new Error("HTTP " + r.status);
+    error.status = r.status;
+    throw error;
+  }
   return r;
 }
 async function apiJson(path, opts) {
@@ -184,7 +189,7 @@ function toast(msg, undoFn) {
   undoBtn.hidden = !undoFn;
   el.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.hidden = true; toastUndoFn = null; }, 8000);
+  toastTimer = setTimeout(() => { el.hidden = true; toastUndoFn = null; }, undoFn ? 8000 : 3000);
 }
 $("#toast-undo").addEventListener("click", () => {
   clearTimeout(toastTimer);
@@ -282,14 +287,20 @@ function perbaruiPil() {
 }
 
 /* Kantong: hitungan dan isi dari server, dengan snapshot luring */
+function kantongCacheKey() {
+  return state.me && state.me.id ? `pocil-kantong-cache:${state.me.id}` : null;
+}
 async function muatKantong() {
+  const cacheKey = kantongCacheKey();
+  try { localStorage.removeItem("pocil-kantong-cache"); } catch { /* kunci versi lama */ }
   try {
     const data = await apiJson("/api/kantong");
     state.kantongItems = asArray(data, "items");
     state.kantongCount = data.count ?? state.kantongItems.length;
     state.kantongOffline = false;
     try {
-      localStorage.setItem("pocil-kantong-cache", JSON.stringify({
+      if (!cacheKey) throw new Error("Akun belum diketahui");
+      localStorage.setItem(cacheKey, JSON.stringify({
         count: state.kantongCount,
         items: state.kantongItems.slice(0, 50),
         at: Date.now(),
@@ -297,7 +308,7 @@ async function muatKantong() {
     } catch { /* penyimpanan lokal penuh, abaikan */ }
   } catch {
     try {
-      const cached = JSON.parse(localStorage.getItem("pocil-kantong-cache") || "null");
+      const cached = cacheKey ? JSON.parse(localStorage.getItem(cacheKey) || "null") : null;
       if (cached) {
         state.kantongItems = cached.items || [];
         state.kantongCount = cached.count || 0;
@@ -360,10 +371,8 @@ async function resolveBookmarkLists(bookmarkId, forceRefresh = false) {
   }
   const manual = state.lists.filter(isManualList);
   const results = await Promise.all(manual.map(async (l) => {
-    try {
-      const d = await apiJson(`/api/lists/${l.id}/bookmarks?limit=100`);
-      return asArray(d, "bookmarks").some((x) => x.id === bookmarkId) ? l : null;
-    } catch { return null; }
+    const d = await apiJson(`/api/lists/${l.id}/bookmarks?limit=100`);
+    return asArray(d, "bookmarks").some((x) => x.id === bookmarkId) ? l : null;
   }));
   const found = results.filter(Boolean);
   state.membershipCache.set(bookmarkId, found);
@@ -814,7 +823,7 @@ async function renderFocus() {
   body.querySelectorAll("[data-pilih]").forEach((btn) => {
     btn.onclick = async () => {
       try {
-        await api(`/api/kantong/${b.id}/categorize`, {
+        const result = await apiJson(`/api/kantong/${b.id}/categorize`, {
           method: "POST", body: JSON.stringify({ listId: btn.dataset.pilih }),
         });
         state.membershipCache.delete(b.id);
@@ -822,6 +831,9 @@ async function renderFocus() {
         state.kantongItems = state.kantongItems.filter((x) => x.id !== b.id);
         state.kantongCount = state.kantongItems.length;
         perbaruiPil();
+        if (result.remaining_in && result.remaining_in.length) {
+          toast("Masuk koleksi, tapi masih tertaut ke koleksi lain");
+        }
         renderFocus();
       } catch { toast("Gagal mengkategorikan, coba lagi"); }
     };
@@ -841,10 +853,12 @@ async function renderFocus() {
       const listId = created.id || created.list?.id;
       if (listId) {
         state.lists.push(created.list || created);
-        await api(`/api/kantong/${b.id}/categorize`, {
+        const result = await apiJson(`/api/kantong/${b.id}/categorize`, {
           method: "POST", body: JSON.stringify({ listId }),
         });
-        toast(`Masuk ke ${name}`);
+        toast(result.remaining_in && result.remaining_in.length
+          ? `Masuk ke ${name}, tapi masih tertaut ke koleksi lain`
+          : `Masuk ke ${name}`);
       }
       state.membershipCache.delete(b.id);
       state.focusIndex += 1;
@@ -893,7 +907,13 @@ async function bukaDetailSimpanan(id, ret) {
     wrap.innerHTML = `<div class="empty-state"><p>Gagal memuat simpanan.</p></div>`;
     return;
   }
-  const containing = await resolveBookmarkLists(id);
+  let containing;
+  try {
+    containing = await resolveBookmarkLists(id);
+  } catch {
+    wrap.innerHTML = `<div class="empty-state"><p>Gagal memuat keanggotaan koleksi. Coba lagi sebelum mengubah simpanan.</p></div>`;
+    return;
+  }
   const parentList = containing[0] || null;
   const c = b.content || {};
   const img = cardImage(b);
@@ -1016,7 +1036,7 @@ async function bukaDetailSimpanan(id, ret) {
     try {
       if (!b.archived) {
         for (const l of containing) {
-          await api(`/api/lists/${l.id}/bookmarks/${id}`, { method: "DELETE" }).catch(() => {});
+          await api(`/api/lists/${l.id}/bookmarks/${id}`, { method: "DELETE" });
         }
         await api("/api/bookmarks/" + id, { method: "PATCH", body: JSON.stringify({ archived: true }) });
         toast("Diarsipkan dan dikeluarkan dari semua koleksi");
@@ -1297,15 +1317,6 @@ async function muatAtur() {
       </button>` : ""}
     </div>
     <div class="set-group">
-      <h2 class="set-group-title">Terhubung</h2>
-      <button class="set-row" type="button" id="atur-affiliate">
-        <span class="set-ic">${icon("link")}</span>
-        <span>Affiliate OS</span>
-        <span class="set-val">Persiapan</span>
-        <span class="chev">›</span>
-      </button>
-    </div>
-    <div class="set-group">
       <h2 class="set-group-title">Bantuan</h2>
       <button class="set-row" type="button" id="atur-tentang">
         <span class="set-ic ic-cream">${icon("note")}</span>
@@ -1519,10 +1530,6 @@ async function muatAtur() {
       } catch { toast("Gagal memicu penandaan ulang"); }
     };
   }
-  wrap.querySelector("#atur-affiliate").onclick = () => {
-    bukaLembar("Affiliate OS", `
-      <p style="font-size:14px;line-height:1.6">Jembatan ke Affiliate OS masih persiapan di rilis ini. Belum ada integrasi yang bekerja dari menu ini.</p>`);
-  };
   wrap.querySelector("#atur-tentang").onclick = () => {
     bukaLembar("Tentang Pocil", `
       <p style="font-size:14px;line-height:1.6">Pocil adalah kantong simpanan pribadi di homelab. Semua simpanan baru mendarat di Kantong, lalu kamu pilihkan satu koleksi lewat Beresin Kantong. Mesin penyimpanan di belakang layar adalah Karakeep, tetapi kamu tidak pernah melihat antarmukanya.</p>
@@ -1597,6 +1604,13 @@ async function muatAtur() {
 /* Keluar */
 $("#btn-logout").addEventListener("click", async () => {
   await fetch("/auth/logout", { method: "POST" }).catch(() => {});
+  const cacheKey = kantongCacheKey();
+  if (cacheKey) {
+    try { localStorage.removeItem(cacheKey); } catch { /* abaikan */ }
+  }
+  state.me = null;
+  state.kantongItems = [];
+  state.kantongCount = 0;
   tampilkanLogin();
 });
 
@@ -1627,6 +1641,7 @@ $("#btn-logout").addEventListener("click", async () => {
       : err === "provisioning-gagal" ? "Akun mesin gagal dibuat, minta admin mencoba lagi."
       : err === "harus-masuk" ? "Masuk dulu sebelum berbagi dari aplikasi lain."
       : err === "email-tidak-terverifikasi" ? "Email Google itu belum terverifikasi."
+      : err === "simpan-gagal" ? "Simpanan gagal masuk ke Pocil. Coba kirim ulang."
       : "Login Google gagal, coba lagi.";
   }
   try {

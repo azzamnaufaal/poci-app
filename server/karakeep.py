@@ -194,6 +194,10 @@ def _paginate(api_key, method, path, key, limit=100, cap=5000, **kwargs):
         cursor = data.get("nextCursor") if isinstance(data, dict) else None
         if not cursor:
             break
+    if cursor and len(items) >= cap:
+        raise KarakeepError(
+            f"Hasil melebihi batas {cap} item; hitung ulang setelah mempersempit data", 413
+        )
     return items
 
 
@@ -208,12 +212,9 @@ def compute_kantong(api_key):
     manual = [lst for lst in lists if _is_manual_list(lst)]
     member_ids = set()
     for lst in manual:
-        try:
-            members = _paginate(
-                api_key, "GET", f"/lists/{lst['id']}/bookmarks", "bookmarks"
-            )
-        except KarakeepError:
-            members = []
+        members = _paginate(
+            api_key, "GET", f"/lists/{lst['id']}/bookmarks", "bookmarks"
+        )
         for b in members:
             member_ids.add(b.get("id"))
     bookmarks = _paginate(api_key, "GET", "/bookmarks", "bookmarks")
@@ -227,29 +228,32 @@ def compute_kantong(api_key):
 
 
 def categorize(api_key, bookmark_id, target_list_id):
-    """Tegakkan satu koleksi utama: keluar dari semua list manual lama
-    dulu, baru masuk ke list baru. Mengembalikan daftar list lama.
-    """
-    try:
-        current = get_lists_of_bookmark(api_key, bookmark_id)
-    except KarakeepError:
-        current = []
+    """Tambahkan ke tujuan sebelum menghapus keanggotaan list sebelumnya."""
+    current = get_lists_of_bookmark(api_key, bookmark_id)
     lists = current if isinstance(current, list) else current.get("lists", [])
+    assigned = rest(api_key, "PUT", f"/lists/{target_list_id}/bookmarks/{bookmark_id}")
+    if assigned.status_code >= 400:
+        raise KarakeepError(f"Gagal masuk ke koleksi ({assigned.status_code})", 502)
+
     removed = []
+    remaining = []
     for lst in lists:
         list_id = lst.get("id") if isinstance(lst, dict) else lst
         if list_id and list_id != target_list_id:
-            resp = rest(
-                api_key,
-                "DELETE",
-                f"/lists/{list_id}/bookmarks/{bookmark_id}",
-            )
+            try:
+                resp = rest(
+                    api_key,
+                    "DELETE",
+                    f"/lists/{list_id}/bookmarks/{bookmark_id}",
+                )
+            except KarakeepError:
+                remaining.append(list_id)
+                continue
             if resp.status_code < 400:
                 removed.append(list_id)
-    resp = rest(api_key, "PUT", f"/lists/{target_list_id}/bookmarks/{bookmark_id}")
-    if resp.status_code >= 400:
-        raise KarakeepError(f"Gagal masuk ke koleksi ({resp.status_code})", 502)
-    return removed
+            else:
+                remaining.append(list_id)
+    return {"removed_from": removed, "remaining_in": remaining}
 
 
 def remove_from_all_lists(api_key, bookmark_id):

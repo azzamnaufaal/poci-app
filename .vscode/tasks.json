@@ -1,0 +1,12 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run Pocil local web app",
+			"type": "shell",
+			"command": "env POCIL_DATA_DIR=/tmp/poci-app-local-data SESSION_COOKIE_HTTPS_ONLY=0 .venv/bin/uvicorn --env-file .env server.main:app --host 127.0.0.1 --port 8100",
+			"isBackground": true,
+			"group": "build"
+		}
+	]
+}

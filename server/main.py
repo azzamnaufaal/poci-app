@@ -8,10 +8,14 @@ adalah simpanan tidak terarsip tanpa keanggotaan list manual.
 import os
 import re
 import secrets
+import time
+from collections import defaultdict, deque
+from threading import Lock
+from urllib.parse import urlsplit
 
 import httpx
 from authlib.integrations.starlette_client import OAuth
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
@@ -28,6 +32,12 @@ GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 OWNER_EMAIL = os.environ.get("POCI_OWNER_EMAIL", "").lower()
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_OWNER_CHAT_ID = os.environ.get("TELEGRAM_OWNER_CHAT_ID", "")
+PAIRING_ATTEMPT_WINDOW_SECONDS = 15 * 60
+PAIRING_ATTEMPT_LIMIT = 10
+MAX_CAPTURE_FILE_BYTES = 20 * 1024 * 1024
+MAX_CAPTURE_TEXT_CHARS = 100_000
+_pairing_attempts = defaultdict(deque)
+_pairing_attempts_lock = Lock()
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 WEB_DIR = os.path.join(os.path.dirname(HERE), "web")
@@ -77,6 +87,72 @@ def _require_admin(request):
     return user
 
 
+def _limit_pairing_attempts(request):
+    """Batasi tebakan kode per alamat klien dalam jendela 15 menit."""
+    address = request.client.host if request.client else "unknown"
+    now = time.monotonic()
+    with _pairing_attempts_lock:
+        attempts = _pairing_attempts[address]
+        while attempts and now - attempts[0] >= PAIRING_ATTEMPT_WINDOW_SECONDS:
+            attempts.popleft()
+        if len(attempts) >= PAIRING_ATTEMPT_LIMIT:
+            retry_after = max(1, int(PAIRING_ATTEMPT_WINDOW_SECONDS - (now - attempts[0])))
+            raise HTTPException(
+                status_code=429,
+                detail="terlalu-banyak-percobaan-pairing",
+                headers={"Retry-After": str(retry_after)},
+            )
+        attempts.append(now)
+
+
+def _capture_url(value):
+    if not isinstance(value, str):
+        raise HTTPException(status_code=400, detail="url-tidak-valid")
+    url = value.strip()
+    if not url or len(url) > 4096:
+        raise HTTPException(status_code=400, detail="url-tidak-valid")
+    try:
+        parsed = urlsplit(url)
+        valid = parsed.scheme.lower() in {"http", "https"} and bool(parsed.hostname)
+        _ = parsed.port
+    except ValueError:
+        valid = False
+    if not valid:
+        raise HTTPException(status_code=400, detail="url-tidak-valid")
+    return url
+
+
+def _capture_text(value):
+    if not isinstance(value, str):
+        raise HTTPException(status_code=400, detail="teks-tidak-valid")
+    text = value.strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="teks-tidak-valid")
+    if len(text) > MAX_CAPTURE_TEXT_CHARS:
+        raise HTTPException(status_code=413, detail="teks-terlalu-panjang")
+    return text
+
+
+def _check_capture_content_length(request):
+    raw_length = request.headers.get("content-length")
+    if raw_length:
+        try:
+            length = int(raw_length)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="ukuran-berkas-tidak-valid") from exc
+        if length > MAX_CAPTURE_FILE_BYTES + 1024 * 1024:
+            raise HTTPException(status_code=413, detail="berkas-terlalu-besar")
+
+
+async def _read_capture_image(upload):
+    if not (upload.content_type or "").lower().startswith("image/"):
+        raise HTTPException(status_code=415, detail="hanya-gambar-yang-didukung")
+    data = await upload.read(MAX_CAPTURE_FILE_BYTES + 1)
+    if len(data) > MAX_CAPTURE_FILE_BYTES:
+        raise HTTPException(status_code=413, detail="berkas-terlalu-besar")
+    return data
+
+
 def _user_key(user):
     return user.get("karakeep_api_key") or ""
 
@@ -87,6 +163,15 @@ def _public_me(user):
         user["role"] == "owner" and TELEGRAM_OWNER_CHAT_ID
     )
     return data
+
+
+def _owner_machine_credentials(email, name):
+    """Return the legacy owner key or provision a personal Karakeep account."""
+    if kk.LEGACY_API_KEY:
+        return None, kk.LEGACY_API_KEY
+    if not kk.ADMIN_API_KEY:
+        raise kk.KarakeepError("Kunci admin mesin belum disetel", 503)
+    return kk.provision_user(email, name, secrets.token_urlsafe(24))
 
 
 def _accept_pending_list_invites(user):
@@ -132,7 +217,7 @@ async def google_callback(request: Request):
     token = await oauth.google.authorize_access_token(request)
     userinfo = token.get("userinfo") or {}
     email = (userinfo.get("email") or "").lower()
-    if not email or not userinfo.get("email_verified", True):
+    if not email or userinfo.get("email_verified") is not True:
         return RedirectResponse("/?error=email-tidak-terverifikasi", status_code=303)
     name = userinfo.get("name") or email.split("@")[0]
     picture = userinfo.get("picture")
@@ -141,6 +226,16 @@ async def google_callback(request: Request):
         existing = store.get_user_by_email(conn, email)
         if existing:
             user = existing
+            if user["role"] == "owner" and not _user_key(user):
+                try:
+                    kid, key = _owner_machine_credentials(email, name)
+                except kk.KarakeepError:
+                    return RedirectResponse("/?error=provisioning-gagal", status_code=303)
+                user = store.update_user(
+                    conn,
+                    user["id"],
+                    {"karakeep_api_key": key, "karakeep_user_id": kid},
+                )
             request.session["user_id"] = user["id"]
             _accept_pending_list_invites(user)
             return RedirectResponse("/", status_code=303)
@@ -149,22 +244,16 @@ async def google_callback(request: Request):
         if owner is None:
             if OWNER_EMAIL and email != OWNER_EMAIL:
                 return RedirectResponse("/?error=email-tidak-diundang", status_code=303)
+            try:
+                kid, key = _owner_machine_credentials(email, name)
+            except kk.KarakeepError:
+                return RedirectResponse("/?error=provisioning-gagal", status_code=303)
             user = store.create_user(conn, email, name, picture, "owner")
-            key = kk.LEGACY_API_KEY
-            kid = None
-            if not key and kk.ADMIN_API_KEY:
-                try:
-                    kid, key = kk.provision_user(
-                        email, name, secrets.token_urlsafe(24)
-                    )
-                except kk.KarakeepError:
-                    key = ""
-            if key:
-                store.update_user(
-                    conn,
-                    user["id"],
-                    {"karakeep_api_key": key, "karakeep_user_id": kid},
-                )
+            user = store.update_user(
+                conn,
+                user["id"],
+                {"karakeep_api_key": key, "karakeep_user_id": kid},
+            )
             request.session["user_id"] = user["id"]
             return RedirectResponse("/", status_code=303)
 
@@ -292,10 +381,10 @@ async def api_categorize(request: Request, bookmark_id: str):
     if not target:
         raise HTTPException(status_code=400, detail="koleksi-tujuan-wajib")
     try:
-        removed = kk.categorize(_user_key(user), bookmark_id, target)
+        result = kk.categorize(_user_key(user), bookmark_id, target)
     except kk.KarakeepError as exc:
         raise HTTPException(status_code=exc.status, detail=str(exc))
-    return {"ok": True, "removed_from": removed}
+    return {"ok": True, **result}
 
 
 @app.get("/api/devices")
@@ -339,6 +428,7 @@ async def api_pairing_redeem(request: Request):
     Endpoint ini yang dipanggil Shortcut: kode dimasukkan sekali,
     token yang kembali disimpan Shortcut sendiri.
     """
+    _limit_pairing_attempts(request)
     body = await request.json()
     raw_code = (body.get("code") or "").replace(" ", "").strip()
     device_name = (body.get("device_name") or "Perangkat baru").strip()[:60]
@@ -379,7 +469,10 @@ def _create_bookmark_for_user(user, kind, url=None, text=None, asset_id=None):
         payload = {"type": "asset", "assetId": asset_id}
     else:
         raise HTTPException(status_code=400, detail="jenis-tidak-dikenal")
-    resp = kk.rest(key, "POST", "/bookmarks", json=payload)
+    try:
+        resp = kk.rest(key, "POST", "/bookmarks", json=payload)
+    except kk.KarakeepError as exc:
+        raise HTTPException(status_code=exc.status, detail="mesin-tidak-terjangkau") from exc
     if resp.status_code >= 400:
         raise HTTPException(status_code=502, detail="gagal-menyimpan-ke-mesin")
     return resp.json()
@@ -396,20 +489,28 @@ async def api_capture(request: Request):
     user = _capture_user(request)
     content_type = request.headers.get("Content-Type", "")
     if "multipart/form-data" in content_type:
+        _check_capture_content_length(request)
         form = await request.form()
         upload = form.get("file")
         if upload is None:
             raise HTTPException(status_code=400, detail="berkas-wajib")
-        data = await upload.read()
+        data = await _read_capture_image(upload)
         files = {"file": (upload.filename, data, upload.content_type)}
-        resp = kk.rest(_user_key(user), "POST", "/assets", files=files)
+        try:
+            resp = kk.rest(_user_key(user), "POST", "/assets", files=files)
+        except kk.KarakeepError as exc:
+            raise HTTPException(status_code=exc.status, detail="gagal-mengunggah-aset") from exc
         if resp.status_code >= 400:
             raise HTTPException(status_code=502, detail="gagal-mengunggah-aset")
         asset_id = resp.json().get("assetId")
         return _create_bookmark_for_user(user, "asset", asset_id=asset_id)
     body = await request.json()
-    url = (body.get("url") or "").strip()
-    text = (body.get("text") or "").strip()
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="body-tidak-valid")
+    raw_url = body.get("url")
+    url = _capture_url(raw_url) if raw_url else ""
+    raw_text = body.get("text")
+    text = _capture_text(raw_text) if raw_text else ""
     if url:
         return _create_bookmark_for_user(user, "link", url=url)
     if text:
@@ -418,13 +519,7 @@ async def api_capture(request: Request):
 
 
 @app.post("/tangkap")
-async def share_target(
-    request: Request,
-    title: str = Form(default=""),
-    text: str = Form(default=""),
-    url: str = Form(default=""),
-    file: UploadFile = File(default=None),
-):
+async def share_target(request: Request):
     """Tujuan share target PWA Android: berbagi dari aplikasi lain
     mendarat di Kantong. Membutuhkan sesi login di PWA.
     """
@@ -432,22 +527,34 @@ async def share_target(
     if not user:
         return RedirectResponse("/?error=harus-masuk", status_code=303)
     try:
+        _check_capture_content_length(request)
+        form = await request.form()
+        title = str(form.get("title") or "")
+        text = str(form.get("text") or "")
+        url = str(form.get("url") or "")
+        file = form.get("file")
         if file is not None:
-            data = await file.read()
+            if not hasattr(file, "read"):
+                raise HTTPException(status_code=400, detail="berkas-tidak-valid")
+            data = await _read_capture_image(file)
             files = {"file": (file.filename, data, file.content_type)}
-            resp = kk.rest(_user_key(user), "POST", "/assets", files=files)
-            if resp.status_code < 400:
-                _create_bookmark_for_user(
-                    user, "asset", asset_id=resp.json().get("assetId")
-                )
+            try:
+                resp = kk.rest(_user_key(user), "POST", "/assets", files=files)
+            except kk.KarakeepError as exc:
+                raise HTTPException(status_code=exc.status, detail="gagal-mengunggah-aset") from exc
+            if resp.status_code >= 400:
+                raise HTTPException(status_code=502, detail="gagal-mengunggah-aset")
+            _create_bookmark_for_user(
+                user, "asset", asset_id=resp.json().get("assetId")
+            )
         elif url.strip():
-            _create_bookmark_for_user(user, "link", url=url.strip())
+            _create_bookmark_for_user(user, "link", url=_capture_url(url))
         elif text.strip() or title.strip():
             _create_bookmark_for_user(
-                user, "text", text=(text.strip() or title.strip())
+                user, "text", text=_capture_text(text.strip() or title.strip())
             )
-    except HTTPException:
-        pass
+    except (HTTPException, kk.KarakeepError):
+        return RedirectResponse("/?error=simpan-gagal", status_code=303)
     return RedirectResponse("/?view=kantong", status_code=303)
 
 
