@@ -1,67 +1,47 @@
-"""Poci - server perantara tipis di depan Karakeep.
+"""Server Pocil: login Google, undangan, pairing, tangkap, dan proxy Karakeep.
 
-Tugasnya cuma tiga:
-1. Menyimpan API key Karakeep di sisi server (tidak pernah sampai ke browser).
-2. Menyediakan login Poci sendiri: OAuth Google sebagai jalur utama dan
-   password .env sebagai cadangan selama transisi.
-3. Meneruskan panggilan frontend ke REST API Karakeep dan sebaliknya.
-
-Semua data simpanan tetap milik Karakeep; Poci tidak menyimpan salinan data.
+Aplikasi ini adalah satu-satunya yang bicara ke Karakeep. Browser tidak
+pernah memegang kunci API mesin. Kantong bukan sebuah list: Kantong
+adalah simpanan tidak terarsip tanpa keanggotaan list manual.
 """
 
 import os
+import re
 import secrets
-from pathlib import Path
 
 import httpx
 from authlib.integrations.starlette_client import OAuth
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, RedirectResponse, Response
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
-KARAKEEP_BASE_URL = os.environ.get("KARAKEEP_BASE_URL", "http://karakeep-web-1:3000").rstrip("/")
-KARAKEEP_PUBLIC_URL = os.environ.get("KARAKEEP_PUBLIC_URL", "http://ai-core:3000").rstrip("/")
-KARAKEEP_API_KEY = os.environ.get("KARAKEEP_API_KEY", "")
-POCI_USERNAME = os.environ.get("POCI_USERNAME", "")
-POCI_PASSWORD = os.environ.get("POCI_PASSWORD", "")
-SESSION_SECRET = os.environ.get("SESSION_SECRET", "")
-if not SESSION_SECRET or SESSION_SECRET == "ganti-di-env":
-    raise RuntimeError(
-        "SESSION_SECRET belum diisi di .env atau masih nilai bawaan. "
-        "Isi dengan string acak panjang (openssl rand -hex 32) sebelum server dijalankan."
-    )
+from server import karakeep as kk
+from server import store
 
-# Login Google (OAuth/OIDC). Client ID dan secret dibuat di Google Cloud Console;
-# redirect URI yang didaftarkan di sana harus sama persis dengan GOOGLE_REDIRECT_URI.
+SESSION_SECRET = os.environ.get("SESSION_SECRET", "")
+if not SESSION_SECRET or SESSION_SECRET == "ganti-dengan-rahasia-baru":
+    raise RuntimeError("SESSION_SECRET belum disetel di environment")
+
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
-GOOGLE_ALLOWED_EMAIL = os.environ.get("GOOGLE_ALLOWED_EMAIL", "").strip().lower()
-GOOGLE_REDIRECT_URI = os.environ.get(
-    "GOOGLE_REDIRECT_URI", "https://poci.ruangkendali.ai.id/auth/google/callback"
-)
-GOOGLE_ENABLED = bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
+OWNER_EMAIL = os.environ.get("POCI_OWNER_EMAIL", "").lower()
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_OWNER_CHAT_ID = os.environ.get("TELEGRAM_OWNER_CHAT_ID", "")
 
-# Login password .env adalah cadangan selama transisi ke Google.
-# Matikan lewat POCI_PASSWORD_LOGIN=off sesudah login Google terbukti jalan.
-PASSWORD_LOGIN_ENABLED = os.environ.get("POCI_PASSWORD_LOGIN", "on").strip().lower() != "off"
+HERE = os.path.dirname(os.path.abspath(__file__))
+WEB_DIR = os.path.join(os.path.dirname(HERE), "web")
 
-# Cookie sesi hanya dikirim lewat HTTPS (browser selalu melihat Poci lewat HTTPS
-# Cloudflare). Set SESSION_COOKIE_HTTPS_ONLY=0 hanya untuk uji lokal lewat HTTP.
-SESSION_COOKIE_HTTPS_ONLY = os.environ.get("SESSION_COOKIE_HTTPS_ONLY", "1").strip() != "0"
-
-WEB_DIR = Path(__file__).resolve().parent.parent / "web"
-
-app = FastAPI(title="Poci")
+app = FastAPI(title="Pocil")
 app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET,
-    max_age=60 * 60 * 24 * 30,
-    https_only=SESSION_COOKIE_HTTPS_ONLY,
+    https_only=os.environ.get("SESSION_COOKIE_HTTPS_ONLY", "1") != "0",
+    same_site="lax",
 )
 
 oauth = OAuth()
-if GOOGLE_ENABLED:
+if GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET:
     oauth.register(
         name="google",
         client_id=GOOGLE_CLIENT_ID,
@@ -71,209 +51,567 @@ if GOOGLE_ENABLED:
     )
 
 
-def require_login(request: Request) -> None:
-    if not request.session.get("user"):
-        raise HTTPException(status_code=401, detail="Belum login")
+def _db():
+    return store.connect()
 
 
-async def karakeep(request: Request, method: str, path: str, **kwargs) -> httpx.Response:
-    """Panggil Karakeep dengan API key server, kembalikan respons apa adanya."""
-    require_login(request)
-    headers = {"Authorization": f"Bearer {KARAKEEP_API_KEY}"}
-    async with httpx.AsyncClient(base_url=KARAKEEP_BASE_URL, timeout=30.0, trust_env=False) as client:
-        return await client.request(method, path, headers=headers, **kwargs)
+def _current_user(request):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return None
+    with _db() as conn:
+        return store.get_user_by_id(conn, user_id)
 
 
-@app.post("/auth/login")
-async def login(request: Request):
-    if not PASSWORD_LOGIN_ENABLED:
-        raise HTTPException(status_code=403, detail="Login password sedang dimatikan")
-    body = await request.json()
-    username_ok = secrets.compare_digest(str(body.get("username", "")), POCI_USERNAME)
-    password_ok = secrets.compare_digest(str(body.get("password", "")), POCI_PASSWORD)
-    if username_ok and password_ok and POCI_PASSWORD:
-        request.session["user"] = POCI_USERNAME
-        return {"ok": True}
-    raise HTTPException(status_code=401, detail="Username atau password salah")
+def _require_user(request):
+    user = _current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="harus-masuk")
+    return user
+
+
+def _require_admin(request):
+    user = _require_user(request)
+    if user["role"] != "owner":
+        raise HTTPException(status_code=403, detail="khusus-admin")
+    return user
+
+
+def _user_key(user):
+    return user.get("karakeep_api_key") or ""
+
+
+def _public_me(user):
+    data = store.public_user(user)
+    data["telegram_linked"] = bool(
+        user["role"] == "owner" and TELEGRAM_OWNER_CHAT_ID
+    )
+    return data
+
+
+def _accept_pending_list_invites(user):
+    """Terima undangan koleksi yang menunggu, atas nama anggota.
+
+    Best effort: kegagalan di sini tidak menggagalkan login, karena
+    undangan bisa diterima ulang dari server saat anggota membuka
+    koleksi bersama.
+    """
+    key = _user_key(user)
+    if not key:
+        return
+    try:
+        pending = kk.get_pending_invitations(key)
+    except kk.KarakeepError:
+        return
+    invites = pending if isinstance(pending, list) else pending.get("invitations", [])
+    for inv in invites:
+        inv_id = inv.get("id") if isinstance(inv, dict) else None
+        if not inv_id:
+            continue
+        try:
+            kk.accept_invitation(key, inv_id)
+        except kk.KarakeepError:
+            continue
 
 
 @app.get("/auth/config")
-async def auth_config():
-    # Hanya saklar tampilan layar login, aman dibaca tanpa login.
-    return {"google": GOOGLE_ENABLED, "password_login": PASSWORD_LOGIN_ENABLED}
+def auth_config():
+    return {"google": bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)}
 
 
 @app.get("/auth/google/login")
 async def google_login(request: Request):
-    if not GOOGLE_ENABLED:
-        raise HTTPException(status_code=404, detail="Login Google belum dikonfigurasi")
-    return await oauth.google.authorize_redirect(request, GOOGLE_REDIRECT_URI)
+    if not (GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET):
+        raise HTTPException(status_code=503, detail="login-google-belum-disetel")
+    redirect_uri = request.url_for("google_callback")
+    return await oauth.google.authorize_redirect(request, redirect_uri)
 
 
-@app.get("/auth/google/callback")
+@app.get("/auth/google/callback", name="google_callback")
 async def google_callback(request: Request):
-    if not GOOGLE_ENABLED:
-        raise HTTPException(status_code=404, detail="Login Google belum dikonfigurasi")
-    try:
-        token = await oauth.google.authorize_access_token(request)
-    except Exception:
-        return RedirectResponse(url="/?error=login-gagal")
+    token = await oauth.google.authorize_access_token(request)
     userinfo = token.get("userinfo") or {}
-    email = str(userinfo.get("email", "")).strip().lower()
-    # Hanya satu email pemilik yang boleh masuk, dan wajib terverifikasi Google.
-    if not email or userinfo.get("email_verified") is not True or email != GOOGLE_ALLOWED_EMAIL:
-        return RedirectResponse(url="/?error=email-tidak-diizinkan")
-    request.session["user"] = email
-    return RedirectResponse(url="/")
+    email = (userinfo.get("email") or "").lower()
+    if not email or not userinfo.get("email_verified", True):
+        return RedirectResponse("/?error=email-tidak-terverifikasi", status_code=303)
+    name = userinfo.get("name") or email.split("@")[0]
+    picture = userinfo.get("picture")
+
+    with _db() as conn:
+        existing = store.get_user_by_email(conn, email)
+        if existing:
+            user = existing
+            request.session["user_id"] = user["id"]
+            _accept_pending_list_invites(user)
+            return RedirectResponse("/", status_code=303)
+
+        owner = store.get_owner(conn)
+        if owner is None:
+            if OWNER_EMAIL and email != OWNER_EMAIL:
+                return RedirectResponse("/?error=email-tidak-diundang", status_code=303)
+            user = store.create_user(conn, email, name, picture, "owner")
+            key = kk.LEGACY_API_KEY
+            kid = None
+            if not key and kk.ADMIN_API_KEY:
+                try:
+                    kid, key = kk.provision_user(
+                        email, name, secrets.token_urlsafe(24)
+                    )
+                except kk.KarakeepError:
+                    key = ""
+            if key:
+                store.update_user(
+                    conn,
+                    user["id"],
+                    {"karakeep_api_key": key, "karakeep_user_id": kid},
+                )
+            request.session["user_id"] = user["id"]
+            return RedirectResponse("/", status_code=303)
+
+        invitation = store.get_pending_invitation(conn, email)
+        if not invitation:
+            return RedirectResponse("/?error=email-tidak-diundang", status_code=303)
+        try:
+            kid, key = kk.provision_user(email, name, secrets.token_urlsafe(24))
+        except kk.KarakeepError:
+            return RedirectResponse("/?error=provisioning-gagal", status_code=303)
+        user = store.create_user(conn, email, name, picture, "member")
+        store.update_user(
+            conn, user["id"], {"karakeep_api_key": key, "karakeep_user_id": kid}
+        )
+        store.mark_invitation(conn, invitation["id"], "accepted")
+        request.session["user_id"] = user["id"]
+        _accept_pending_list_invites(user)
+        return RedirectResponse("/", status_code=303)
+
+
+@app.get("/auth/me")
+def auth_me(request: Request):
+    user = _require_user(request)
+    return _public_me(user)
 
 
 @app.post("/auth/logout")
-async def logout(request: Request):
+def auth_logout(request: Request):
     request.session.clear()
     return {"ok": True}
 
 
-@app.get("/auth/me")
-async def me(request: Request):
-    require_login(request)
-    return {"user": request.session["user"]}
+@app.get("/api/me")
+def api_me(request: Request):
+    return _public_me(_require_user(request))
 
 
-@app.get("/api/bookmarks")
-async def list_bookmarks(request: Request, limit: int = 24, cursor: str | None = None, archived: bool = False):
-    params: dict = {"limit": limit, "archived": archived}
-    if cursor:
-        params["cursor"] = cursor
-    r = await karakeep(request, "GET", "/api/v1/bookmarks", params=params)
-    return JSONResponse(status_code=r.status_code, content=r.json())
-
-
-@app.get("/api/bookmarks/search")
-async def search_bookmarks(request: Request, q: str, limit: int = 24):
-    r = await karakeep(request, "GET", "/api/v1/bookmarks/search", params={"q": q, "limit": limit})
-    return JSONResponse(status_code=r.status_code, content=r.json())
-
-
-@app.get("/api/bookmarks/{bookmark_id}")
-async def get_bookmark(request: Request, bookmark_id: str):
-    r = await karakeep(request, "GET", f"/api/v1/bookmarks/{bookmark_id}")
-    return JSONResponse(status_code=r.status_code, content=r.json())
-
-
-@app.post("/api/bookmarks")
-async def create_bookmark(request: Request):
+@app.patch("/api/me")
+async def api_me_patch(request: Request):
+    user = _require_user(request)
     body = await request.json()
-    r = await karakeep(request, "POST", "/api/v1/bookmarks", json=body)
-    return JSONResponse(status_code=r.status_code, content=r.json())
+    fields = {}
+    if isinstance(body.get("name"), str) and body["name"].strip():
+        fields["name"] = body["name"].strip()[:80]
+    picture = body.get("picture")
+    if isinstance(picture, str) and picture.startswith("data:image/"):
+        if len(picture) > 350000:
+            raise HTTPException(status_code=413, detail="foto-terlalu-besar")
+        fields["picture"] = picture
+    if not fields:
+        raise HTTPException(status_code=400, detail="tidak-ada-perubahan")
+    with _db() as conn:
+        updated = store.update_user(conn, user["id"], fields)
+    return _public_me(updated)
 
 
-@app.patch("/api/bookmarks/{bookmark_id}")
-async def update_bookmark(request: Request, bookmark_id: str):
+@app.patch("/api/me/reminder")
+async def api_me_reminder(request: Request):
+    """Saklar pengingat khusus pemilik. Menyalakan tanpa akun Telegram
+    yang tertaut ditolak dengan kode jelas, saklar tidak menyala diam-diam.
+    """
+    user = _require_user(request)
+    if user["role"] != "owner":
+        raise HTTPException(status_code=403, detail="pengingat-khusus-pemilik")
     body = await request.json()
-    r = await karakeep(request, "PATCH", f"/api/v1/bookmarks/{bookmark_id}", json=body)
-    return JSONResponse(status_code=r.status_code, content=r.json())
+    enabled = bool(body.get("enabled"))
+    if enabled and not TELEGRAM_OWNER_CHAT_ID:
+        raise HTTPException(status_code=409, detail="telegram-belum-tertaut")
+    with _db() as conn:
+        updated = store.update_user(
+            conn, user["id"], {"reminder_enabled": 1 if enabled else 0}
+        )
+    return _public_me(updated)
 
 
-@app.delete("/api/bookmarks/{bookmark_id}")
-async def delete_bookmark(request: Request, bookmark_id: str):
-    r = await karakeep(request, "DELETE", f"/api/v1/bookmarks/{bookmark_id}")
-    return Response(status_code=r.status_code, content=r.content)
+@app.get("/api/admin/members")
+def admin_members(request: Request):
+    _require_admin(request)
+    with _db() as conn:
+        return {
+            "members": store.list_members(conn),
+            "invitations": store.list_invitations(conn),
+        }
 
 
-@app.get("/api/lists")
-async def list_lists(request: Request):
-    r = await karakeep(request, "GET", "/api/v1/lists")
-    return JSONResponse(status_code=r.status_code, content=r.json())
-
-
-@app.post("/api/lists")
-async def create_list(request: Request):
+@app.post("/api/invitations")
+async def create_invitation(request: Request):
+    admin = _require_admin(request)
     body = await request.json()
-    r = await karakeep(request, "POST", "/api/v1/lists", json=body)
-    return JSONResponse(status_code=r.status_code, content=r.json())
+    email = (body.get("email") or "").strip().lower()
+    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        raise HTTPException(status_code=400, detail="email-tidak-valid")
+    with _db() as conn:
+        if store.get_user_by_email(conn, email):
+            raise HTTPException(status_code=409, detail="sudah-menjadi-anggota")
+        if store.get_pending_invitation(conn, email):
+            raise HTTPException(status_code=409, detail="undangan-sudah-ada")
+        invitation = store.create_invitation(conn, email, admin["id"])
+    return invitation
 
 
-@app.patch("/api/lists/{list_id}")
-async def update_list(request: Request, list_id: str):
+@app.delete("/api/invitations/{inv_id}")
+def revoke_invitation(request: Request, inv_id: str):
+    _require_admin(request)
+    with _db() as conn:
+        store.mark_invitation(conn, inv_id, "revoked")
+    return {"ok": True}
+
+
+@app.get("/api/kantong")
+def api_kantong(request: Request):
+    user = _require_user(request)
+    try:
+        items, count = kk.compute_kantong(_user_key(user))
+    except kk.KarakeepError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc))
+    return {"items": items, "count": count}
+
+
+@app.post("/api/kantong/{bookmark_id}/categorize")
+async def api_categorize(request: Request, bookmark_id: str):
+    user = _require_user(request)
     body = await request.json()
-    r = await karakeep(request, "PATCH", f"/api/v1/lists/{list_id}", json=body)
-    return JSONResponse(status_code=r.status_code, content=r.json() if r.content else {})
+    target = body.get("listId")
+    if not target:
+        raise HTTPException(status_code=400, detail="koleksi-tujuan-wajib")
+    try:
+        removed = kk.categorize(_user_key(user), bookmark_id, target)
+    except kk.KarakeepError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc))
+    return {"ok": True, "removed_from": removed}
 
 
-@app.delete("/api/lists/{list_id}")
-async def delete_list(request: Request, list_id: str):
-    r = await karakeep(request, "DELETE", f"/api/v1/lists/{list_id}")
-    return Response(status_code=r.status_code, content=r.content)
+@app.get("/api/devices")
+def api_devices(request: Request):
+    user = _require_user(request)
+    with _db() as conn:
+        return {"devices": store.list_devices(conn, user["id"])}
 
 
-@app.get("/api/lists/{list_id}/bookmarks")
-async def list_bookmarks_in_list(request: Request, list_id: str, limit: int = 24, cursor: str | None = None):
-    params: dict = {"limit": limit}
-    if cursor:
-        params["cursor"] = cursor
-    r = await karakeep(request, "GET", f"/api/v1/lists/{list_id}/bookmarks", params=params)
-    return JSONResponse(status_code=r.status_code, content=r.json())
+@app.delete("/api/devices/{device_id}")
+def api_device_revoke(request: Request, device_id: str):
+    user = _require_user(request)
+    with _db() as conn:
+        ok = store.revoke_device(conn, user["id"], device_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="perangkat-tidak-ditemukan")
+    return {"ok": True}
 
 
-@app.put("/api/lists/{list_id}/bookmarks/{bookmark_id}")
-async def add_to_list(request: Request, list_id: str, bookmark_id: str):
-    r = await karakeep(request, "PUT", f"/api/v1/lists/{list_id}/bookmarks/{bookmark_id}")
-    return Response(status_code=r.status_code, content=r.content)
+@app.post("/api/pairing/code")
+async def api_pairing_code(request: Request):
+    """Terbitkan kode pairing 6 digit untuk perangkat baru.
+
+    Kode berlaku 10 menit dan sekali pakai. Token tidak pernah
+    diketik pengguna; token diterbitkan saat kode ditukarkan.
+    """
+    user = _require_user(request)
+    body = await request.json()
+    device_name = (body.get("device_name") or "Perangkat baru").strip()[:60]
+    code = f"{secrets.randbelow(900000) + 100000:06d}"
+    display = f"{code[:3]} {code[3:]}"
+    with _db() as conn:
+        store.create_pairing_code(conn, user["id"], code, device_name)
+    return {"code": display, "expires_in_seconds": 600, "device_name": device_name}
 
 
-@app.delete("/api/lists/{list_id}/bookmarks/{bookmark_id}")
-async def remove_from_list(request: Request, list_id: str, bookmark_id: str):
-    r = await karakeep(request, "DELETE", f"/api/v1/lists/{list_id}/bookmarks/{bookmark_id}")
-    return Response(status_code=r.status_code, content=r.content)
+@app.post("/api/pairing/redeem")
+async def api_pairing_redeem(request: Request):
+    """Tukarkan kode pairing menjadi token personal perangkat.
+
+    Endpoint ini yang dipanggil Shortcut: kode dimasukkan sekali,
+    token yang kembali disimpan Shortcut sendiri.
+    """
+    body = await request.json()
+    raw_code = (body.get("code") or "").replace(" ", "").strip()
+    device_name = (body.get("device_name") or "Perangkat baru").strip()[:60]
+    if not re.fullmatch(r"\d{6}", raw_code):
+        raise HTTPException(status_code=400, detail="kode-tidak-valid")
+    with _db() as conn:
+        rec = store.redeem_pairing_code(conn, raw_code)
+        if not rec:
+            raise HTTPException(
+                status_code=400, detail="kode-salah-atau-kedaluwarsa"
+            )
+        if device_name == "Perangkat baru" and rec["device_name"]:
+            device_name = rec["device_name"]
+        device_id, token = store.create_device(conn, rec["user_id"], device_name)
+    return {"token": token, "device_id": device_id}
 
 
-@app.post("/api/bookmarks/{bookmark_id}/recrawl")
-async def recrawl_bookmark(request: Request, bookmark_id: str):
-    r = await karakeep(request, "POST", f"/api/v1/bookmarks/{bookmark_id}/recrawl")
-    return Response(
-        status_code=r.status_code,
-        content=r.content,
-        media_type=r.headers.get("content-type", "application/json"),
+def _capture_user(request):
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        token = auth[7:].strip()
+        with _db() as conn:
+            user = store.get_user_by_token(conn, token)
+            if user:
+                store.touch_device(conn, token)
+                return user
+        raise HTTPException(status_code=401, detail="token-tidak-valid")
+    return _require_user(request)
+
+
+def _create_bookmark_for_user(user, kind, url=None, text=None, asset_id=None):
+    key = _user_key(user)
+    if kind == "link":
+        payload = {"type": "link", "url": url}
+    elif kind == "text":
+        payload = {"type": "text", "text": text or ""}
+    elif kind == "asset":
+        payload = {"type": "asset", "assetId": asset_id}
+    else:
+        raise HTTPException(status_code=400, detail="jenis-tidak-dikenal")
+    resp = kk.rest(key, "POST", "/bookmarks", json=payload)
+    if resp.status_code >= 400:
+        raise HTTPException(status_code=502, detail="gagal-menyimpan-ke-mesin")
+    return resp.json()
+
+
+@app.post("/api/capture")
+async def api_capture(request: Request):
+    """Satu endpoint gabungan simpan untuk Shortcut dan klien pairing.
+
+    Menerima JSON (tautan atau catatan) atau multipart (gambar).
+    Hasilnya selalu mendarat di Kantong karena tidak dimasukkan ke
+    list mana pun. Kunci mesin tidak pernah ada di perangkat.
+    """
+    user = _capture_user(request)
+    content_type = request.headers.get("Content-Type", "")
+    if "multipart/form-data" in content_type:
+        form = await request.form()
+        upload = form.get("file")
+        if upload is None:
+            raise HTTPException(status_code=400, detail="berkas-wajib")
+        data = await upload.read()
+        files = {"file": (upload.filename, data, upload.content_type)}
+        resp = kk.rest(_user_key(user), "POST", "/assets", files=files)
+        if resp.status_code >= 400:
+            raise HTTPException(status_code=502, detail="gagal-mengunggah-aset")
+        asset_id = resp.json().get("assetId")
+        return _create_bookmark_for_user(user, "asset", asset_id=asset_id)
+    body = await request.json()
+    url = (body.get("url") or "").strip()
+    text = (body.get("text") or "").strip()
+    if url:
+        return _create_bookmark_for_user(user, "link", url=url)
+    if text:
+        return _create_bookmark_for_user(user, "text", text=text)
+    raise HTTPException(status_code=400, detail="url-atau-teks-wajib")
+
+
+@app.post("/tangkap")
+async def share_target(
+    request: Request,
+    title: str = Form(default=""),
+    text: str = Form(default=""),
+    url: str = Form(default=""),
+    file: UploadFile = File(default=None),
+):
+    """Tujuan share target PWA Android: berbagi dari aplikasi lain
+    mendarat di Kantong. Membutuhkan sesi login di PWA.
+    """
+    user = _current_user(request)
+    if not user:
+        return RedirectResponse("/?error=harus-masuk", status_code=303)
+    try:
+        if file is not None:
+            data = await file.read()
+            files = {"file": (file.filename, data, file.content_type)}
+            resp = kk.rest(_user_key(user), "POST", "/assets", files=files)
+            if resp.status_code < 400:
+                _create_bookmark_for_user(
+                    user, "asset", asset_id=resp.json().get("assetId")
+                )
+        elif url.strip():
+            _create_bookmark_for_user(user, "link", url=url.strip())
+        elif text.strip() or title.strip():
+            _create_bookmark_for_user(
+                user, "text", text=(text.strip() or title.strip())
+            )
+    except HTTPException:
+        pass
+    return RedirectResponse("/?view=kantong", status_code=303)
+
+
+@app.post("/api/lists/{list_id}/collaborators")
+async def api_invite_collaborator(request: Request, list_id: str):
+    user = _require_user(request)
+    body = await request.json()
+    email = (body.get("email") or "").strip().lower()
+    role = body.get("role")
+    if role not in ("viewer", "editor"):
+        raise HTTPException(status_code=400, detail="peran-tidak-valid")
+    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        raise HTTPException(status_code=400, detail="email-tidak-valid")
+    try:
+        result = kk.invite_collaborator(_user_key(user), list_id, email, role)
+    except kk.KarakeepError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc))
+    return result
+
+
+@app.get("/api/lists/{list_id}/collaborators")
+def api_get_collaborators(request: Request, list_id: str):
+    user = _require_user(request)
+    try:
+        return kk.get_collaborators(_user_key(user), list_id)
+    except kk.KarakeepError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc))
+
+
+@app.delete("/api/lists/{list_id}/collaborators/{member_id}")
+def api_remove_collaborator(request: Request, list_id: str, member_id: str):
+    user = _require_user(request)
+    try:
+        kk.remove_collaborator(_user_key(user), list_id, member_id)
+    except kk.KarakeepError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc))
+    return {"ok": True}
+
+
+@app.patch("/api/lists/{list_id}/collaborators/{member_id}")
+async def api_update_collaborator(request: Request, list_id: str, member_id: str):
+    user = _require_user(request)
+    body = await request.json()
+    role = body.get("role")
+    if role not in ("viewer", "editor"):
+        raise HTTPException(status_code=400, detail="peran-tidak-valid")
+    try:
+        kk.update_collaborator_role(_user_key(user), list_id, member_id, role)
+    except kk.KarakeepError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc))
+    return {"ok": True}
+
+
+@app.post("/api/lists/invitations/accept-pending")
+def api_accept_pending(request: Request):
+    user = _require_user(request)
+    _accept_pending_list_invites(user)
+    return {"ok": True}
+
+
+@app.post("/api/admin/retrigger-inference")
+async def api_retrigger_inference(request: Request):
+    """Pemicu massal penandaan ulang (admin). Memakai kunci admin mesin,
+    bukan kunci pengguna, karena prosedurnya mensyaratkan peran admin.
+    """
+    _require_admin(request)
+    body = await request.json()
+    status = body.get("status", "all")
+    if status not in ("all", "failure", "pending", "success"):
+        raise HTTPException(status_code=400, detail="status-tidak-valid")
+    admin_key = kk.ADMIN_API_KEY or ""
+    try:
+        result = kk.trigger_inference(admin_key, status)
+    except kk.KarakeepError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc))
+    return result
+
+
+@app.post("/api/reminders/send")
+def api_reminder_send(request: Request):
+    """Kirim pengingat Kantong ke pemilik lewat Telegram.
+
+    Endpoint ini yang dipanggil penjadwal luar (misalnya cron Astra).
+    Anggota tidak pernah mendapat pengingat dari sini.
+    """
+    user = _require_user(request)
+    if user["role"] != "owner":
+        raise HTTPException(status_code=403, detail="pengingat-khusus-pemilik")
+    if not user["reminder_enabled"]:
+        return {"sent": False, "reason": "pengingat-nonaktif"}
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_OWNER_CHAT_ID:
+        return {"sent": False, "reason": "telegram-belum-tertaut"}
+    try:
+        _, count = kk.compute_kantong(_user_key(user))
+    except kk.KarakeepError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc))
+    if count == 0:
+        return {"sent": False, "reason": "kantong-kosong"}
+    text = (
+        f"Pocil: ada {count} simpanan di Kantong yang belum dibereskan. "
+        "Buka Beresin Kantong dan pilihkan koleksinya satu per satu."
     )
-
-
-@app.get("/api/config")
-async def get_config(request: Request):
-    require_login(request)
-    return {"karakeep_public_url": KARAKEEP_PUBLIC_URL}
-
-
-@app.get("/api/tags")
-async def list_tags(request: Request):
-    r = await karakeep(request, "GET", "/api/v1/tags")
-    return JSONResponse(status_code=r.status_code, content=r.json())
-
-
-@app.get("/api/assets/{asset_id}")
-async def get_asset(request: Request, asset_id: str):
-    """Teruskan berkas aset (gambar sampul, screenshot, unggahan) ke browser."""
-    require_login(request)
-    headers = {"Authorization": f"Bearer {KARAKEEP_API_KEY}"}
-    async with httpx.AsyncClient(base_url=KARAKEEP_BASE_URL, timeout=30.0, trust_env=False) as client:
-        r = await client.get(f"/api/v1/assets/{asset_id}", headers=headers)
-    if r.status_code != 200:
-        raise HTTPException(status_code=r.status_code, detail="Aset tidak ditemukan")
-    return Response(
-        content=r.content,
-        media_type=r.headers.get("content-type", "application/octet-stream"),
-        headers={"Cache-Control": "private, max-age=3600"},
-    )
+    try:
+        with httpx.Client(timeout=15.0, trust_env=False) as client:
+            resp = client.post(
+                f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+                json={"chat_id": TELEGRAM_OWNER_CHAT_ID, "text": text},
+            )
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"telegram-gagal: {exc}")
+    if resp.status_code >= 400:
+        raise HTTPException(status_code=502, detail="telegram-menolak-pesan")
+    return {"sent": True, "count": count}
 
 
 @app.get("/api/health")
-async def health(request: Request):
-    require_login(request)
+def health():
+    return {"ok": True}
+
+
+@app.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+async def api_proxy(request: Request, path: str):
+    """Proxy tipis ke REST Karakeep dengan kunci milik pengguna."""
+    user = _require_user(request)
+    key = _user_key(user)
+    content_type = request.headers.get("Content-Type", "")
     try:
-        r = await karakeep(request, "GET", "/api/v1/users/me")
-        return {"karakeep": r.status_code == 200}
-    except httpx.HTTPError:
-        return {"karakeep": False}
+        if "multipart/form-data" in content_type:
+            form = await request.form()
+            files = {}
+            data = {}
+            for field, value in form.multi_items():
+                if hasattr(value, "read"):
+                    files[field] = (
+                        value.filename,
+                        await value.read(),
+                        value.content_type,
+                    )
+                else:
+                    data[field] = value
+            resp = kk.rest(
+                key,
+                request.method,
+                "/" + path,
+                files=files or None,
+                data=data or None,
+            )
+        else:
+            raw = await request.body()
+            resp = kk.rest(
+                key,
+                request.method,
+                "/" + path,
+                content=raw if raw else None,
+                headers={"Content-Type": "application/json"} if raw else {},
+            )
+    except kk.KarakeepError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc))
+    if resp.status_code == 204 or not resp.content:
+        return JSONResponse(content={}, status_code=resp.status_code)
+    try:
+        return JSONResponse(content=resp.json(), status_code=resp.status_code)
+    except ValueError:
+        return JSONResponse(content={}, status_code=resp.status_code)
 
 
-# Frontend statis dilayani terakhir supaya rute /api dan /auth menang duluan.
 app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")

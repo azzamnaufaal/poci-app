@@ -1,284 +1,86 @@
 "use strict";
-/* Poci - frontend. Semua data dibaca dari Karakeep lewat server perantara
-   (/api/...), API key tidak pernah ada di sisi browser. */
+/* Pocil - frontend. Semua data dibaca dari Karakeep lewat server perantara
+   (/api/...), kunci mesin tidak pernah ada di sisi browser. Kantong bukan
+   sebuah list: Kantong adalah simpanan tidak terarsip tanpa keanggotaan
+   list manual. Simpanan baru tidak dimasukkan ke list mana pun, jadi
+   otomatis mendarat di Kantong. */
 
 const $ = (sel) => document.querySelector(sel);
 
-// Palet warna pastel-jenuh untuk tab folder dan ubin ikon (hanya aksen kecil)
-const FOLDER_COLORS = ["#FE6A73", "#B6DE48", "#FED264", "#9AD1F5", "#F6A6D7", "#FFC38A", "#A8E6B8", "#C9B8F5"];
-const TAG_COLORS = ["#FED264", "#B6DE48", "#F6A6D7", "#9AD1F5", "#FFC38A", "#A8E6B8", "#FE6A73", "#C9B8F5"];
-
-// 16 swatch warna untuk sheet Koleksi Baru
-const SWATCH_COLORS = [
-  "#F56476", "#FED264", "#B6DE48", "#7FB6D9",
-  "#C3A6E8", "#F2A65A", "#8FD0C5", "#E88BB0",
-  "#5DA85F", "#E4572E", "#4C7DD9", "#9BC53D",
-  "#F9C784", "#B08968", "#6C757D", "#2F2A24",
-];
+/* Ikon garis konsisten, satu pembungkus SVG untuk semua ikon */
+const ICON_PATHS = {
+  folder: '<path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/>',
+  group: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 19c.8-3 3.2-4.5 6.5-4.5s5.7 1.5 6.5 4.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M16.5 14.6c2.7.3 4.6 1.7 5.2 4.4"/>',
+  trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  archive: '<path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/>',
+  move: '<polyline points="9 18 15 12 9 6"/><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/>',
+  open: '<path d="M8 16L16 8M9.5 8H16v6.5"/>',
+  pencil: '<path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>',
+  check: '<polyline points="20 6 9 17 4 12"/>',
+  plus: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+  refresh: '<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>',
+  dots: '<circle cx="12" cy="5" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.6" fill="currentColor" stroke="none"/>',
+  arrowLeft: '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',
+  list: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
+  grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  card: '<rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+  image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
+  note: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+  upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+};
+function icon(name) {
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICON_PATHS[name] || "") + "</svg>";
+}
+function logoSVG(width) {
+  return '<svg class="logo-anim" style="width:' + width + 'px; height:auto;" viewBox="0 0 72 52" fill="none" aria-hidden="true"><g class="card-in"><rect x="27" y="2" width="18" height="20" rx="3" style="fill:var(--yellow)" stroke="currentColor" stroke-width="3"/><path d="M31 8.5h10M31 13.5h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g><path d="M14 14h44v16c0 11-10 19-22 19S14 41 14 30z" style="fill:var(--pink)" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M19 19.5h34" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3" stroke-linecap="round"/><circle cx="36" cy="41" r="2.6" style="fill:var(--yellow)" stroke="currentColor" stroke-width="2.5"/></svg>';
+}
+function groupSVG() {
+  return icon("group");
+}
 
 const state = {
+  me: null,
   lists: [],
-  tags: [],
-  libraryCursor: null,
+  kantongItems: [],
+  kantongCount: 0,
+  kantongOffline: false,
+  currentView: "koleksi",
+  detailReturn: null,
   currentListId: null,
   collectionItems: [],
-  isSelecting: false,
-  selectedBookmarks: new Set(),
+  viewMode: "list",
+  searchQ: "",
+  searchTag: null,
+  searchTagId: null,
+  searchResults: [],
+  tags: [],
   focusQueue: [],
   focusIndex: 0,
-  focusListId: null,
-  isSwipeMode: false,
-  swipeTitle: "",
-  totalBookmarks: 0,
-  favouriteCount: 0,
+  greeted: false,
+  koleksiScroll: 0,
+  suppressClick: false,
+  collaboratorsCache: new Map(),
+  membershipCache: new Map(),
 };
 
-/* 43 ikon koleksi SVG */
-const ICON_SVGS = {
-  folder: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>`,
-  star: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
-  heart: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`,
-  book: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`,
-  music: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`,
-  camera: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`,
-  flag: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>`,
-  moon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
-  sun: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`,
-  cloud: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>`,
-  key: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-1.5 1.5L14 9l-1.5-1.5L11 9l-1.5-1.5L8 9m-1.5-1.5L2 12a6 6 0 1 0 8.5 8.5l9.5-9.5V2h-5z"/></svg>`,
-  calendar: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
-  globe: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
-  gift: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>`,
-  leaf: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 21 2c-1.5 5-2 6.5-3.1 12.2A7 7 0 0 1 11 20z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>`,
-  briefcase: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>`,
-  cart: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>`,
-  plane: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3.5c-.5-.5-2.5 0-4 1.5L13.5 8.5 5.3 6.7c-.9-.2-1.8.3-2.1 1.2-.3.9.1 1.9.9 2.3l6.5 3.9-3.7 3.7-2.7-.4c-.5-.1-1 .1-1.3.5l-.2.3c-.4.5-.3 1.2.2 1.6l2.8 2.3 2.3 2.8c.4.5 1.1.6 1.6.2l.3-.2c.4-.3.6-.8.5-1.3l-.4-2.7 3.7-3.7 3.9 6.5c.4.8 1.4 1.2 2.3.9.9-.3 1.4-1.2 1.2-2.1z"/></svg>`,
-  car: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="9" width="22" height="9" rx="2"/><path d="M4 9l2-5h12l2 5"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>`,
-  coffee: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>`,
-  film: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>`,
-  headphones: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>`,
-  pin: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>`,
-  fork: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2v20M18 2a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3M6 2v6a3 3 0 0 0 3 3h0a3 3 0 0 0 3-3V2M9 11v11"/></svg>`,
-  palette: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a10 10 0 1 1 10-10c0 1.66-1.34 3-3 3h-2.2a2.5 2.5 0 0 0-2 4c.34.47.3 1-.1 1.45-.35.4-.85.55-1.7.55z"/><circle cx="7.5" cy="10.5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="7.5" r="1" fill="currentColor" stroke="none"/><circle cx="16.5" cy="10.5" r="1" fill="currentColor" stroke="none"/></svg>`,
-  game: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="11" rx="5"/><line x1="6" y1="10.5" x2="6" y2="14.5"/><line x1="4" y1="12.5" x2="8" y2="12.5"/><circle cx="16" cy="11" r="1" fill="currentColor" stroke="none"/><circle cx="18" cy="14" r="1" fill="currentColor" stroke="none"/></svg>`,
-  dumbbell: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5v11"/><path d="M3 9v6"/><path d="M17.5 6.5v11"/><path d="M21 9v6"/><path d="M6.5 12h11"/></svg>`,
-  dollar: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M15.5 9.3c-.6-1-1.9-1.6-3.5-1.6-2 0-3.6 1.1-3.6 2.6 0 3.6 7.2 1.9 7.2 4.6 0 1.5-1.6 2.6-3.6 2.6-1.6 0-2.9-.6-3.5-1.6"/><line x1="12" y1="5.8" x2="12" y2="18.2"/></svg>`,
-  phone: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`,
-  monitor: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`,
-  clock: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
-  bulb: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.4 1 2.3h6c0-.9.4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg>`,
-  grad: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 9 12 4 2 9l10 5 10-5z"/><path d="M6 11.5V16c0 1.66 2.69 3 6 3s6-1.34 6-3v-4.5"/><path d="M22 9v5"/></svg>`,
-  shield: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
-  tv: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>`,
-  bell: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
-  box: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`,
-  layers: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>`,
-  code: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`,
-  bolt: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
-  bookmark: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`,
-  tag: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`,
-  home: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
-};
-
-/* Ikon UI Antarmuka */
-const ICONS = {
-  arrowLeft: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>`,
-  arrowRight: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>`,
-  collection: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>`,
-  bookmark: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`,
-  pinned: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>`,
-  tag: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`,
-  archive: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>`,
-  trash: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
-  share: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`,
-  move: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>`,
-  refresh: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>`,
-  pencil: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>`,
-  check: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
-  mascot: `<svg width="44" height="44" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="poci-mascot"><path d="M10 20h28v14a8 8 0 0 1-8 8H18a8 8 0 0 1-8-8V20Z"/><path d="M14 20c0-6 4-10 10-10s10 4 10 10"/><circle cx="24" cy="7" r="2" fill="currentColor"/><path d="M38 24h4a4 4 0 0 1 4 4v2a4 4 0 0 1-4 4h-4"/><path d="M10 26l-6-4v-2l6 2"/><circle cx="20" cy="28" r="1.5" fill="currentColor"/><circle cx="28" cy="28" r="1.5" fill="currentColor"/><path d="M22 33c1 1 3 1 4 0"/></svg>`,
-};
-
-/* Peta Kunci Ikon ke Emoji */
-const ICON_EMOJIS = {
-  folder: "📁",
-  star: "⭐",
-  heart: "❤️",
-  book: "📚",
-  music: "🎵",
-  camera: "📷",
-  flag: "🚩",
-  moon: "🌙",
-  sun: "☀️",
-  cloud: "☁️",
-  key: "🔑",
-  calendar: "📅",
-  globe: "🌐",
-  gift: "🎁",
-  leaf: "🍃",
-  briefcase: "💼",
-  cart: "🛒",
-  plane: "✈️",
-  car: "🚗",
-  coffee: "☕",
-  film: "🎬",
-  headphones: "🎧",
-  pin: "📌",
-  fork: "🍴",
-  palette: "🎨",
-  game: "🎮",
-  dumbbell: "💪",
-  dollar: "💲",
-  phone: "📞",
-  monitor: "🖥️",
-  clock: "🕐",
-  bulb: "💡",
-  grad: "🎓",
-  shield: "🛡️",
-  tv: "📺",
-  bell: "🔔",
-  box: "📦",
-  layers: "🗂️",
-  code: "💻",
-  bolt: "⚡",
-  bookmark: "🔖",
-  tag: "🏷️",
-  home: "🏠",
-};
-
-function buildListDescription(existingDesc, iconKey, colorHex) {
-  const pociLine = `poci:${iconKey}:${colorHex}`;
-  if (!existingDesc || !existingDesc.trim()) {
-    return pociLine;
+/* Tema: pilihan eksplisit terang atau gelap, default mengikuti sistem */
+function terapkanTema(pilihan) {
+  if (pilihan !== "light" && pilihan !== "dark") {
+    pilihan = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   }
-  const lines = existingDesc.split("\n");
-  const firstLine = lines[0].trim();
-  // Baris poci: menggantikan baris pertama HANYA bila baris pertama lama juga berawalan poci:
-  // atau berformat skema lama (kunci:#hex)
-  if (firstLine.startsWith("poci:") || (firstLine.includes(":") && ICON_SVGS[firstLine.split(":")[0]])) {
-    lines[0] = pociLine;
-    return lines.join("\n");
-  }
-  return [pociLine, ...lines].join("\n");
+  document.documentElement.dataset.theme = pilihan;
+  document.querySelectorAll(".theme-switch button").forEach((b) =>
+    b.classList.toggle("active", b.dataset.themeChoice === pilihan));
 }
-
-/* Parser Metadata Koleksi */
-function parseListMeta(list, index = 0) {
-  // Prioritas 1: baris pertama description berawalan poci: (skema baru)
-  if (list && list.description) {
-    const firstLine = list.description.split("\n")[0].trim();
-    if (firstLine.startsWith("poci:")) {
-      const parts = firstLine.split(":");
-      if (parts.length >= 3) {
-        const k = parts[1];
-        const c = parts[2];
-        if (ICON_SVGS[k] && c) {
-          return { iconKey: k, color: c, svg: ICON_SVGS[k] };
-        }
-      }
-    }
-  }
-  // Prioritas 2: kolom icon berformat <kunci>:<#hex> (skema lama putaran 2)
-  if (list && list.icon && list.icon.includes(":")) {
-    const parts = list.icon.split(":");
-    const k = parts[0];
-    const c = parts[1];
-    if (ICON_SVGS[k] && c) {
-      return { iconKey: k, color: c, svg: ICON_SVGS[k] };
-    }
-  }
-  // Prioritas 3: tebakan kata kunci nama
-  const name = (((list && list.name) || "") + " " + ((list && list.description) || "")).toLowerCase();
-  let iconKey = "folder";
-  if (/resep|makan|food|kuliner|masak|cook|recipe/i.test(name)) iconKey = "fork";
-  else if (/coffee|kopi|minum/i.test(name)) iconKey = "coffee";
-  else if (/belanja|shop|beli|store|market|cart|promo|flash/i.test(name)) iconKey = "cart";
-  else if (/ide|konten|kreatif|inspirasi|brainstorm|idea/i.test(name)) iconKey = "sun";
-  else if (/baca|buku|belajar|read|book|riset|research|study/i.test(name)) iconKey = "book";
-  else if (/travel|jalan|wisata|trip|liburan|flight|plane/i.test(name)) iconKey = "plane";
-  else if (/music|musik|lagu/i.test(name)) iconKey = "music";
-  else if (/film|movie|nonton/i.test(name)) iconKey = "film";
-
-  const color = FOLDER_COLORS[index % FOLDER_COLORS.length];
-  return { iconKey, color, svg: ICON_SVGS[iconKey] || ICON_SVGS.folder };
-}
-
-/* Pembersihan Judul & Deskripsi Media Sosial */
-function judulBersih(b, isDetail = false) {
-  const c = b.content || {};
-  const rawTitle = String(b.title || c.title || (c.type === "asset" ? c.fileName : null) || c.url || "Tanpa judul").trim();
-
-  // Pola Instagram: Nama Akun on Instagram: "caption..." (tanda kutip lurus atau curly)
-  const igMatch = rawTitle.match(/^(.+?)\s+on Instagram:\s*["“](.*?)["”]?$/is);
-  if (igMatch) {
-    let caption = (igMatch[2] || "").trim();
-    if (!caption) return igMatch[1].trim();
-
-    // Potong pada akhir kalimat pertama: . ! ?
-    const sentenceMatch = caption.match(/^(.+?[.!?])(?:\s|$)/s);
-    if (sentenceMatch) {
-      caption = sentenceMatch[1].trim();
-    }
-    // Bila masih lebih dari 90 karakter, potong di batas kata terakhir sebelum 90
-    if (caption.length > 90) {
-      const cut = caption.slice(0, 90);
-      const lastSpace = cut.lastIndexOf(" ");
-      caption = (lastSpace > 40 ? cut.slice(0, lastSpace) : cut).trim() + "...";
-    }
-    return caption;
-  }
-
-  // Judul umum > 140 karakter pada kartu / focus mode
-  if (!isDetail && rawTitle.length > 140) {
-    const sentenceMatch = rawTitle.match(/^(.+?[.!?])(?:\s|$)/s);
-    if (sentenceMatch && sentenceMatch[1].length <= 140) {
-      return sentenceMatch[1].trim();
-    }
-    const cut = rawTitle.slice(0, 140);
-    const lastSpace = cut.lastIndexOf(" ");
-    return (lastSpace > 60 ? cut.slice(0, lastSpace) : cut).trim() + "...";
-  }
-
-  return rawTitle;
-}
-
-function deskripsiBersih(b) {
-  const url = b.content?.url || "";
-  const host = hostOf(url);
-  const desc = b.content?.description || "";
-  if (/instagram\.com/i.test(host)) {
-    // Bila deskripsi diawali pola angka likes dan komentar
-    if (/^\d[\d,.]*\s*likes?,\s*\d[\d,.]*\s*comments?\s*-\s*/i.test(desc)) {
-      return b.summary || "";
-    }
-  }
-  return desc || b.summary || "";
-}
-
-/* Tema */
-function applyTheme(choice) {
-  const dark = choice === "dark" || (choice === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-  document.documentElement.dataset.theme = dark ? "dark" : "light";
-  document.querySelectorAll("#theme-segment button").forEach((b) =>
-    b.classList.toggle("active", b.dataset.themeChoice === choice));
-}
-function initTheme() {
-  const saved = localStorage.getItem("poci-theme") || "system";
-  applyTheme(saved);
-  document.querySelectorAll("#theme-segment button").forEach((b) =>
-    b.addEventListener("click", () => {
-      localStorage.setItem("poci-theme", b.dataset.themeChoice);
-      applyTheme(b.dataset.themeChoice);
-    }));
+function initTema() {
+  const saved = localStorage.getItem("pocil-theme");
+  if (saved === "light" || saved === "dark") terapkanTema(saved);
+  else terapkanTema("system");
 }
 
 /* Util */
-function toast(msg) {
-  const el = $("#toast");
-  el.textContent = msg;
-  el.hidden = false;
-  clearTimeout(toast._t);
-  toast._t = setTimeout(() => (el.hidden = true), 2600);
-}
 function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
@@ -296,100 +98,43 @@ function timeAgo(iso) {
 function formatDateTime(iso) {
   if (!iso) return "";
   const d = new Date(iso);
-  const day = d.getDate();
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
-  const m = monthNames[d.getMonth()] || "";
-  const y = d.getFullYear();
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return `${day} ${m} ${y} · ${hh}.${mm}`;
+  return `${d.getDate()} ${monthNames[d.getMonth()] || ""} ${d.getFullYear()} · ${String(d.getHours()).padStart(2, "0")}.${String(d.getMinutes()).padStart(2, "0")}`;
 }
-
-/* API */
-async function api(path, opts = {}) {
-  const r = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
-  if (r.status === 401) { showLogin(); throw new Error("unauthorized"); }
-  return r;
-}
-async function apiJson(path, opts) {
-  const r = await api(path, opts);
-  if (!r.ok) throw new Error("HTTP " + r.status);
-  return r.json();
-}
-const asArray = (data, key) => (Array.isArray(data) ? data : data[key] || []);
-
-// Simpanan baru otomatis masuk antrean Focus Mode (daftar "Belum Dibuka").
-// Kegagalan di sini tidak boleh menggagalkan penyimpanan utamanya.
-async function masukBelumDibuka(bid) {
-  if (!bid) return;
-  try {
-    const fl = state.lists.find((l) => /belum dibuka/i.test(l.name));
-    const fid = state.focusListId || (fl && fl.id);
-    if (fid) await api(`/api/lists/${fid}/bookmarks/${bid}`, { method: "PUT" });
-  } catch { /* abaikan */ }
-}
-
-// Kartu Focus Mode yang dilewati (dibuka atau dilanjut) keluar dari antrean "Belum Dibuka".
-async function keluarAntrean(b) {
-  if (state.isSwipeMode || !state.focusListId) return;
-  await api(`/api/lists/${state.focusListId}/bookmarks/${b.id}`, { method: "DELETE" }).catch(() => {});
-}
-
-// Sesudah keluar antrean: bila simpanan tidak punya koleksi lain, pindah ke folder
-// sistem "Tanpa Kategori" (nama lama "Belum Ada Kategori" tetap diterima selama transisi).
-async function pindahKeKategoriBilaYatim(b) {
-  if (state.isSwipeMode || !state.focusListId) return;
-  try {
-    const kat = state.lists.find((l) => /belum ada kategori|tanpa kategori/i.test(l.name));
-    if (!kat || kat.id === state.focusListId) return;
-    for (const l of state.lists) {
-      if (l.id === state.focusListId || l.id === kat.id) continue;
-      const d = await apiJson(`/api/lists/${l.id}/bookmarks?limit=100`).catch(() => null);
-      if (d && asArray(d, "bookmarks").some((x) => x.id === b.id)) return;
+function judulBersih(b, isDetail = false) {
+  const c = b.content || {};
+  const rawTitle = String(b.title || c.title || (c.type === "asset" ? c.fileName : null) || c.url || "Tanpa judul").trim();
+  const igMatch = rawTitle.match(/^(.+?)\s+on Instagram:\s*["“](.*?)["”]?$/is);
+  if (igMatch) {
+    let caption = (igMatch[2] || "").trim();
+    if (!caption) return igMatch[1].trim();
+    const sentenceMatch = caption.match(/^(.+?[.!?])(?:\s|$)/s);
+    if (sentenceMatch) caption = sentenceMatch[1].trim();
+    if (caption.length > 90) {
+      const cut = caption.slice(0, 90);
+      const lastSpace = cut.lastIndexOf(" ");
+      caption = (lastSpace > 40 ? cut.slice(0, lastSpace) : cut).trim() + "...";
     }
-    await api(`/api/lists/${kat.id}/bookmarks/${b.id}`, { method: "PUT" });
-  } catch { /* abaikan */ }
-}
-
-/* Navigasi */
-const SCREENS = ["home", "library", "search", "detail", "collection", "focus", "settings", "archive"];
-function showScreen(name) {
-  if (state.currentScreen && state.currentScreen !== "detail" && name === "detail") {
-    state.detailPreviousScreen = state.currentScreen;
+    return caption;
   }
-  state.currentScreen = name;
-  SCREENS.forEach((s) => { const el = $("#screen-" + s); if (el) el.hidden = s !== name; });
-  $("#app").hidden = false;
-  $("#screen-login").hidden = true;
-  window.scrollTo(0, 0);
+  if (!isDetail && rawTitle.length > 140) {
+    const sentenceMatch = rawTitle.match(/^(.+?[.!?])(?:\s|$)/s);
+    if (sentenceMatch && sentenceMatch[1].length <= 140) return sentenceMatch[1].trim();
+    const cut = rawTitle.slice(0, 140);
+    const lastSpace = cut.lastIndexOf(" ");
+    return (lastSpace > 60 ? cut.slice(0, lastSpace) : cut).trim() + "...";
+  }
+  return rawTitle;
 }
-function showLogin() {
-  $("#app").hidden = true;
-  $("#screen-login").hidden = false;
+function deskripsiBersih(b) {
+  const url = b.content?.url || "";
+  const host = hostOf(url);
+  const desc = b.content?.description || "";
+  if (/instagram\.com/i.test(host)) {
+    if (/^\d[\d,.]*\s*likes?,\s*\d[\d,.]*\s*comments?\s*-\s*/i.test(desc)) return b.summary || "";
+  }
+  return desc || b.summary || "";
 }
-
-/* Bottom Sheet Generik */
-function showBottomSheet(title, bodyHtml, onRendered) {
-  const sheet = $("#bottom-sheet");
-  $("#sheet-title").textContent = title;
-  $("#sheet-body").innerHTML = bodyHtml;
-  sheet.hidden = false;
-  $("#sheet-close").onclick = closeBottomSheet;
-  sheet.onclick = (e) => {
-    if (e.target === sheet) closeBottomSheet();
-  };
-  if (onRendered) onRendered($("#sheet-body"));
-}
-function closeBottomSheet() {
-  const sheet = $("#bottom-sheet");
-  sheet.hidden = true;
-  $("#sheet-body").innerHTML = "";
-}
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") closeBottomSheet();
-});
-
-/* Kartu Simpanan (Ringan & Bersih) */
 function cardImage(b) {
   const c = b.content || {};
   if (c.type === "asset" && c.assetId) return "/api/assets/" + c.assetId;
@@ -405,1097 +150,904 @@ function cardSource(b) {
   if (c.type === "text") return "Catatan";
   return "";
 }
-function itemCard(b) {
+function jenisKelas(b) {
+  const t = b.content?.type;
+  if (t === "asset") return "image";
+  if (t === "text") return "note";
+  return "link";
+}
+function isManualList(l) {
+  return (l.type || "manual") !== "smart";
+}
+
+/* API */
+async function api(path, opts = {}) {
+  const r = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
+  if (r.status === 401) { tampilkanLogin(); throw new Error("unauthorized"); }
+  return r;
+}
+async function apiJson(path, opts) {
+  const r = await api(path, opts);
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  return r.json();
+}
+const asArray = (data, key) => (Array.isArray(data) ? data : data[key] || []);
+
+/* Toast dengan jendela Urungkan 8 detik */
+let toastTimer = null;
+let toastUndoFn = null;
+function toast(msg, undoFn) {
+  const el = $("#toast");
+  $("#toast-text").textContent = msg;
+  const undoBtn = $("#toast-undo");
+  toastUndoFn = undoFn || null;
+  undoBtn.hidden = !undoFn;
+  el.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.hidden = true; toastUndoFn = null; }, 8000);
+}
+$("#toast-undo").addEventListener("click", () => {
+  clearTimeout(toastTimer);
+  $("#toast").hidden = true;
+  const fn = toastUndoFn;
+  toastUndoFn = null;
+  if (fn) fn();
+});
+
+/* Hapus tertunda: aksi API baru jalan sesudah jendela urungkan lewat.
+   Selama jendela itu, UI sudah maju dan Urungkan memulihkan tampilan. */
+function hapusTertunda(pesan, jalankan, pulihkan) {
+  toast(pesan, () => { if (pulihkan) pulihkan(); });
+  clearTimeout(hapusTertunda._t);
+  hapusTertunda._t = setTimeout(async () => {
+    $("#toast").hidden = true;
+    toastUndoFn = null;
+    try { await jalankan(); } catch { /* pesan gagal sudah ditangani pemanggil */ }
+  }, 8000);
+}
+
+/* Lembar bawah generik */
+let sheetAfterClose = null;
+function bukaLembar(judul, bodyHtml, onRendered) {
+  $("#sheet-title").textContent = judul;
+  $("#sheet-body").innerHTML = bodyHtml;
+  $("#sheet").hidden = false;
+  if (onRendered) onRendered($("#sheet-body"));
+}
+function tutupLembar() {
+  $("#sheet").hidden = true;
+  $("#sheet-body").innerHTML = "";
+  state.suppressClick = false;
+  if (sheetAfterClose) {
+    const fn = sheetAfterClose;
+    sheetAfterClose = null;
+    fn();
+  }
+}
+$("#sheet-close").addEventListener("click", tutupLembar);
+$("#sheet-backdrop").addEventListener("click", tutupLembar);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !$("#sheet").hidden) tutupLembar();
+});
+
+/* Navigasi lima menu */
+const MENU_VIEWS = ["kantong", "koleksi", "tambah", "cari", "atur"];
+function go(view) {
+  state.currentView = view;
+  ["kantong", "koleksi", "tambah", "cari", "atur", "detail-koleksi", "detail-simpanan", "arsip"].forEach((v) => {
+    const el = $("#view-" + v);
+    if (el) el.hidden = v !== view;
+  });
+  document.querySelectorAll(".navbtn").forEach((b) =>
+    b.classList.toggle("active", b.dataset.view === view));
+  if (MENU_VIEWS.includes(view)) window.scrollTo(0, 0);
+  if (view === "kantong") muatKantong();
+  if (view === "koleksi") muatKoleksi();
+  if (view === "cari") muatCariAwal();
+  if (view === "atur") muatAtur();
+}
+function tampilkanLogin() {
+  $("#app").hidden = true;
+  $("#screen-login").hidden = false;
+}
+function tampilkanApp() {
+  $("#app").hidden = false;
+  $("#screen-login").hidden = true;
+}
+
+/* Pil antrean dan lencana: satu sumber dari hitungan Kantong */
+function pillHTML() {
+  const n = state.kantongCount;
+  return n > 0
+    ? '<button class="pill notif attn" type="button" id="pill-kantong">' + n + " di Kantong</button>"
+    : '<button class="pill green notif" type="button" id="pill-kantong">Kantong rapi</button>';
+}
+function perbaruiPil() {
+  const html = '<div class="logo-lockup">' + logoSVG(37) + '<span class="logo-word" style="font-size:24px;">pocil</span></div>' + pillHTML();
+  ["topbar-koleksi", "topbar-tambah", "topbar-cari"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  });
+  document.querySelectorAll("#pill-kantong").forEach((p) =>
+    p.addEventListener("click", () => go("kantong")));
+  const badge = document.querySelector("[data-badge]");
+  if (badge) {
+    if (state.kantongCount > 0) {
+      badge.hidden = false;
+      badge.textContent = state.kantongCount;
+    } else {
+      badge.hidden = true;
+    }
+  }
+}
+
+/* Kantong: hitungan dan isi dari server, dengan snapshot luring */
+async function muatKantong() {
+  try {
+    const data = await apiJson("/api/kantong");
+    state.kantongItems = asArray(data, "items");
+    state.kantongCount = data.count ?? state.kantongItems.length;
+    state.kantongOffline = false;
+    try {
+      localStorage.setItem("pocil-kantong-cache", JSON.stringify({
+        count: state.kantongCount,
+        items: state.kantongItems.slice(0, 50),
+        at: Date.now(),
+      }));
+    } catch { /* penyimpanan lokal penuh, abaikan */ }
+  } catch {
+    try {
+      const cached = JSON.parse(localStorage.getItem("pocil-kantong-cache") || "null");
+      if (cached) {
+        state.kantongItems = cached.items || [];
+        state.kantongCount = cached.count || 0;
+        state.kantongOffline = true;
+      }
+    } catch { /* tanpa snapshot, tampilkan kosong */ }
+  }
+  perbaruiPil();
+  renderKantong();
+}
+function renderKantong() {
+  const wrap = $("#kantong-items");
+  const items = state.kantongItems;
+  const offlineNote = state.kantongOffline
+    ? '<p class="page-sub">Menampilkan simpanan terakhir yang tersimpan (luring). Sambungkan internet untuk memperbarui.</p>'
+    : "";
+  wrap.innerHTML = offlineNote + (items.map((b) => miniCard(b)).join("") || `
+    <div class="empty-state">
+      <p>Kantong rapi. Simpanan baru akan menunggu di sini.</p>
+    </div>`);
+  bindMiniCards(wrap, "kantong");
+  const btn = $("#btn-beresin");
+  btn.disabled = items.length === 0;
+  btn.textContent = items.length > 0 ? `Beresin Kantong (${items.length})` : "Beresin Kantong";
+}
+function miniCard(b) {
   const img = cardImage(b);
-  const firstTag = (b.tags || [])[0];
-  const photo = img
+  const jenis = jenisKelas(b);
+  const preview = img
     ? `<img loading="lazy" src="${esc(img)}" alt="">`
-    : `<div class="no-photo"><span>${esc(judulBersih(b).slice(0, 24))}</span></div>`;
-  const chip = firstTag ? `<span class="item-chip">${esc(firstTag.name)}</span>` : "";
-
-  const isSelectable = state.isSelecting;
-  const isSelected = state.selectedBookmarks.has(b.id);
-
+    : `<span>${esc(judulBersih(b).slice(0, 24))}</span>`;
+  const tags = (b.tags || []).slice(0, 3).map((t) =>
+    `<span class="tag-chip">#${esc(t.name)}</span>`).join("");
   return `
-    <button class="item-card ${isSelectable ? "is-selectable" : ""} ${isSelected ? "is-selected" : ""}" data-bookmark="${esc(b.id)}">
-      ${isSelectable ? `<span class="card-select-checkbox">${isSelected ? ICONS.check : ""}</span>` : ""}
-      <div class="item-photo">${photo}${chip}</div>
-      <div class="item-body">
-        <span class="item-title">${esc(judulBersih(b))}</span>
-        <span class="item-source">${esc(cardSource(b))} · ${esc(timeAgo(b.createdAt))}</span>
+    <button class="mini" data-bookmark="${esc(b.id)}">
+      <div class="mini-preview ${jenis}">${preview}</div>
+      <div class="mini-body">
+        <span class="mini-title">${esc(judulBersih(b))}</span>
+        <span class="mini-meta">${esc(cardSource(b))} · ${esc(timeAgo(b.createdAt))}</span>
+        ${tags}
       </div>
     </button>`;
 }
-function bindCards(container) {
+function bindMiniCards(container, asal) {
   container.querySelectorAll("[data-bookmark]").forEach((el) => {
     el.addEventListener("click", () => {
-      const bid = el.dataset.bookmark;
-      if (state.isSelecting) {
-        if (state.selectedBookmarks.has(bid)) state.selectedBookmarks.delete(bid);
-        else state.selectedBookmarks.add(bid);
-        renderCollectionGrid();
-      } else {
-        openDetail(bid);
-      }
+      bukaDetailSimpanan(el.dataset.bookmark, { view: asal });
     });
   });
 }
 
-/* Pengaman nama folder: nama yang tidak muat satu baris dikecilkan fontnya
-   bertahap (lantai 12px) supaya grid selalu seragam satu baris. */
-const _kanvasUkur = document.createElement("canvas").getContext("2d");
-function sesuaikanUkuranNamaFolder() {
-  document.querySelectorAll("#home-collections .folder-name").forEach((el) => {
-    el.style.fontSize = "";
-    const maxW = el.clientWidth - 2;
-    if (!maxW || maxW <= 0) return;
-    const teks = (el.textContent || "").trim();
-    if (!teks) return;
-    _kanvasUkur.font = "800 15.5px Archivo, sans-serif";
-    const lebar = _kanvasUkur.measureText(teks).width;
-    if (lebar > maxW) {
-      const ukuran = Math.max(12, Math.floor(15.5 * (maxW / lebar) * 2) / 2 - 0.5);
-      el.style.fontSize = ukuran + "px";
-    }
-  });
+/* Keanggotaan: daftar list manual yang memuat satu simpanan */
+async function resolveBookmarkLists(bookmarkId, forceRefresh = false) {
+  if (!forceRefresh && state.membershipCache.has(bookmarkId)) {
+    return state.membershipCache.get(bookmarkId);
+  }
+  if (!state.lists.length) {
+    const ld = await apiJson("/api/lists");
+    state.lists = asArray(ld, "lists");
+  }
+  const manual = state.lists.filter(isManualList);
+  const results = await Promise.all(manual.map(async (l) => {
+    try {
+      const d = await apiJson(`/api/lists/${l.id}/bookmarks?limit=100`);
+      return asArray(d, "bookmarks").some((x) => x.id === bookmarkId) ? l : null;
+    } catch { return null; }
+  }));
+  const found = results.filter(Boolean);
+  state.membershipCache.set(bookmarkId, found);
+  return found;
 }
 
-/* Beranda */
-async function loadHome() {
-  const listsData = await apiJson("/api/lists");
-  state.lists = asArray(listsData, "lists");
-  const grid = $("#home-collections");
-  const shown = state.lists.slice(0, 6);
+/* Kolaborator satu list, di-cache selama sesi */
+async function getCollaborators(listId, forceRefresh = false) {
+  if (!forceRefresh && state.collaboratorsCache.has(listId)) {
+    return state.collaboratorsCache.get(listId);
+  }
+  try {
+    const data = await apiJson(`/api/lists/${listId}/collaborators`);
+    state.collaboratorsCache.set(listId, data);
+    return data;
+  } catch {
+    return null;
+  }
+}
+async function isSharedList(list) {
+  const data = await getCollaborators(list.id);
+  if (!data) return false;
+  const collabs = data.collaborators || [];
+  if (collabs.length > 0) return true;
+  if (data.owner && state.me && state.me.karakeep_user_id) {
+    return data.owner.id !== state.me.karakeep_user_id;
+  }
+  return false;
+}
 
-  // Jumlah isi tiap koleksi dihitung dari daftarnya langsung (API daftar Karakeep
-  // tidak menyediakan numBookmarks, jadi teks "Koleksi" polos bukan pilihan)
-  const isiKoleksi = {};
-  await Promise.all(shown.map(async (l) => {
+/* Koleksi: Pustakaku dan Terakhir Disimpan */
+async function muatKoleksi() {
+  try {
+    const listsData = await apiJson("/api/lists");
+    state.lists = asArray(listsData, "lists");
+  } catch { /* biarkan daftar lama tampil */ }
+  renderPustaka();
+  try {
+    const bmsData = await apiJson("/api/bookmarks?limit=12");
+    const bms = asArray(bmsData, "bookmarks");
+    const wrap = $("#terakhir-list");
+    wrap.innerHTML = bms.slice(0, 6).map((b) => miniCard(b)).join("") || `
+      <div class="empty-state"><p>Belum ada simpanan.</p></div>`;
+    bindMiniCards(wrap, "koleksi");
+  } catch { /* abaikan */ }
+  perbaruiPil();
+}
+async function renderPustaka() {
+  const wrap = $("#pustaka-list");
+  const manual = state.lists.filter(isManualList);
+  if (manual.length === 0) {
+    wrap.innerHTML = `<div class="empty-state"><p>Belum ada koleksi. Buat yang pertama dari Beresin Kantong atau dari lembar kelola.</p></div>`;
+    return;
+  }
+  const counts = {};
+  await Promise.all(manual.map(async (l) => {
     try {
       const d = await apiJson(`/api/lists/${l.id}/bookmarks?limit=100`);
       const n = asArray(d, "bookmarks").length;
-      isiKoleksi[l.id] = d && d.nextCursor ? `${n}+` : `${n}`;
-    } catch { isiKoleksi[l.id] = null; }
+      counts[l.id] = d && d.nextCursor ? `${n}+` : `${n}`;
+    } catch { counts[l.id] = null; }
   }));
-
-  grid.innerHTML = shown.map((l, i) => {
-    const meta = parseListMeta(l, i);
-    const countText = isiKoleksi[l.id] != null ? `${isiKoleksi[l.id]} simpanan` : "Koleksi";
+  const sharedFlags = {};
+  await Promise.all(manual.map(async (l) => {
+    sharedFlags[l.id] = await isSharedList(l);
+  }));
+  wrap.innerHTML = manual.map((l) => {
+    const countText = counts[l.id] != null ? `${counts[l.id]} simpanan` : "Koleksi";
     return `
-      <button class="folder-card" data-list="${esc(l.id)}">
-        <div class="folder-vector-wrap">
-          <svg class="folder-svg" viewBox="0 0 200 160" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path class="folder-back-path" d="M10 80V15C10 9.2 14.7 4.5 20.5 4.5H76C81.2 4.5 85.5 7.3 88 11.4L97.5 24.5C99.3 27.1 101.9 27.8 104.8 27.8H176C183.4 27.8 190 34.4 190 42.5V80H10Z" fill="${meta.color}" />
-            <path class="folder-flap-path" d="M5 49C5 40.9 11.4 34.5 19.2 34.5H180.8C188.6 34.5 195 40.9 195 49L190.5 141.5C190 149.3 183.9 155 176.2 155H23.8C16.1 155 10 149.3 9.5 141.5L5 49Z" />
-          </svg>
-          <div class="folder-content">
-            <div class="folder-top">
-              <span class="folder-tile" style="background:${meta.color}">
-                ${meta.svg}
-              </span>
-              <span class="folder-count">${countText}</span>
-            </div>
-            <span class="folder-name">${esc(l.name)}</span>
-          </div>
-        </div>
-      </button>`;
-  }).join("") || `
-    <div class="empty-state">
-      ${ICONS.mascot}
-      <p>Belum ada koleksi. Buat yang pertama lewat tombol folder di atas.</p>
-    </div>`;
-
-  bindFolderCards(grid);
-  sesuaikanUkuranNamaFolder();
-  if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(() => sesuaikanUkuranNamaFolder());
-  }
-
-  // Focus Mode antrean "Belum Dibuka" atau simpanan terbaru
-  const focusList = state.lists.find((l) => /belum dibuka/i.test(l.name));
-  state.focusListId = focusList ? focusList.id : null;
-  if (focusList) {
-    try {
-      const fd = await apiJson(`/api/lists/${focusList.id}/bookmarks?limit=50`);
-      $("#review-count").textContent = asArray(fd, "bookmarks").length + " simpanan baru";
-    } catch { $("#review-count").textContent = "Simpanan baru"; }
-  } else {
-    try {
-      const fd = await apiJson("/api/bookmarks?limit=10");
-      $("#review-count").textContent = asArray(fd, "bookmarks").length + " simpanan terbaru";
-    } catch { $("#review-count").textContent = "Simpanan baru"; }
-  }
+      <div class="kol-row">
+        <button type="button" class="kol-rowbtn" data-list="${esc(l.id)}">
+          <span>
+            <span class="kol-name">${esc(l.name)}${sharedFlags[l.id] ? ' <span class="shared-ic" role="img" aria-label="Koleksi bersama">' + groupSVG() + "</span>" : ""}</span>
+            <span class="kol-meta">${countText}${sharedFlags[l.id] ? " · dibagikan" : ""}</span>
+          </span>
+        </button>
+        <button type="button" class="vmenu" data-vmenu="${esc(l.id)}" aria-label="Kelola koleksi">${icon("dots")}</button>
+      </div>`;
+  }).join("");
+  bindKolRows(wrap);
 }
-
-/* Tahan-Lama & Klik Folder */
-function bindFolderCards(container) {
-  container.querySelectorAll(".folder-card").forEach((card) => {
-    const listId = card.dataset.list;
-    const list = state.lists.find((l) => l.id === listId);
-    if (!list) return;
-
+function bindKolRows(container) {
+  container.querySelectorAll(".kol-rowbtn").forEach((btn) => {
+    const listId = btn.dataset.list;
     let timer = null;
     let startX = 0, startY = 0;
     let didLongPress = false;
-
-    const clear = () => {
-      if (timer) { clearTimeout(timer); timer = null; }
-    };
-
-    card.addEventListener("pointerdown", (e) => {
+    const clear = () => { if (timer) { clearTimeout(timer); timer = null; } };
+    btn.addEventListener("pointerdown", (e) => {
       didLongPress = false;
-      startX = e.clientX;
-      startY = e.clientY;
+      startX = e.clientX; startY = e.clientY;
       clear();
       timer = setTimeout(() => {
         didLongPress = true;
         if (navigator.vibrate) try { navigator.vibrate(10); } catch {}
-        openFolderContextMenu(list);
-      }, 450);
+        const list = state.lists.find((l) => l.id === listId);
+        if (list) bukaLembarKelola(list, "koleksi");
+      }, 600);
     });
-
-    card.addEventListener("pointermove", (e) => {
-      if (Math.hypot(e.clientX - startX, e.clientY - startY) > 10) {
-        clear();
-      }
+    btn.addEventListener("pointermove", (e) => {
+      if (Math.hypot(e.clientX - startX, e.clientY - startY) > 10) clear();
     });
-
-    card.addEventListener("pointerup", clear);
-    card.addEventListener("pointercancel", clear);
-
-    card.addEventListener("contextmenu", (e) => {
+    btn.addEventListener("pointerup", clear);
+    btn.addEventListener("pointercancel", clear);
+    btn.addEventListener("contextmenu", (e) => {
       e.preventDefault();
       clear();
       didLongPress = true;
-      openFolderContextMenu(list);
+      const list = state.lists.find((l) => l.id === listId);
+      if (list) bukaLembarKelola(list, "koleksi");
     });
-
-    card.addEventListener("click", (e) => {
-      if (didLongPress) {
-        e.preventDefault();
-        e.stopPropagation();
-        return;
-      }
-      openCollection(listId);
+    btn.addEventListener("click", () => {
+      if (didLongPress || state.suppressClick) return;
+      bukaDetailKoleksi(listId);
+    });
+  });
+  container.querySelectorAll("[data-vmenu]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const list = state.lists.find((l) => l.id === btn.dataset.vmenu);
+      if (list) bukaLembarKelola(list, "koleksi");
     });
   });
 }
 
-function openFolderContextMenu(list) {
+/* Lembar kelola: satu lembar yang sama dari tahan lama maupun titik tiga */
+function bukaLembarKelola(list, asal) {
+  state.koleksiScroll = window.scrollY;
+  sheetAfterClose = () => {
+    window.scrollTo(0, state.koleksiScroll);
+    if (asal === "koleksi") muatKoleksi();
+    if (asal === "detail") bukaDetailKoleksi(list.id, true);
+  };
   const html = `
     <div class="sheet-menu-list">
-      <button class="sheet-menu-item" id="menu-edit-folder">
-        ${ICONS.pencil} <span>Ubah Nama dan Tampilan</span>
-      </button>
-      <button class="sheet-menu-item" id="menu-share-folder">
-        ${ICONS.share} <span>Bagikan Koleksi</span>
-      </button>
-      <button class="sheet-menu-item danger" id="menu-delete-folder">
-        ${ICONS.trash} <span>Hapus Koleksi</span>
-      </button>
+      <button class="sheet-menu-item" id="kelola-ubah-nama">${icon("pencil")}<span>Ubah Nama</span></button>
+      <button class="sheet-menu-item" id="kelola-bagikan">${icon("group")}<span>Bagikan</span></button>
+      <button class="sheet-menu-item danger" id="kelola-hapus">${icon("trash")}<span>Hapus</span></button>
     </div>`;
-
-  showBottomSheet(list.name, html, (body) => {
-    body.querySelector("#menu-edit-folder").onclick = () => {
-      closeBottomSheet();
-      openCollectionSheet(list);
-    };
-
-    body.querySelector("#menu-share-folder").onclick = async () => {
-      closeBottomSheet();
-      try {
-        await api(`/api/lists/${list.id}`, { method: "PATCH", body: JSON.stringify({ public: true }) });
-        const cfg = await apiJson("/api/config");
-        const pubBase = (cfg && cfg.karakeep_public_url) || "http://ai-core:3000";
-        const shareUrl = `${pubBase.replace(/\/$/, "")}/public/lists/${list.id}`;
-
-        if (navigator.share) {
+  bukaLembar(list.name, html, (body) => {
+    body.querySelector("#kelola-ubah-nama").onclick = () => {
+      const formHtml = `
+        <form id="form-ubah-nama">
+          <div class="sheet-form-group">
+            <label class="sheet-label" for="input-ubah-nama">Nama koleksi</label>
+            <input class="input" id="input-ubah-nama" type="text" maxlength="60" value="${esc(list.name)}" required autocomplete="off">
+          </div>
+          <button type="submit" class="btn-primary" style="width:100%">Simpan</button>
+        </form>`;
+      bukaLembar("Ubah Nama", formHtml, (fBody) => {
+        const inp = fBody.querySelector("#input-ubah-nama");
+        setTimeout(() => inp.focus(), 100);
+        fBody.querySelector("#form-ubah-nama").onsubmit = async (e) => {
+          e.preventDefault();
+          const name = inp.value.trim();
+          if (!name) return;
           try {
-            await navigator.share({ title: list.name, url: shareUrl });
-            toast("Tautan koleksi dibagikan");
-            return;
-          } catch {}
-        }
-        await navigator.clipboard.writeText(shareUrl);
-        toast("Tautan koleksi disalin");
-      } catch {
-        toast("Gagal membagikan koleksi");
-      }
+            await api(`/api/lists/${list.id}`, { method: "PATCH", body: JSON.stringify({ name }) });
+            toast("Koleksi diperbarui");
+            tutupLembar();
+          } catch { toast("Gagal mengubah nama"); }
+        };
+      });
     };
-
-    body.querySelector("#menu-delete-folder").onclick = () => {
+    body.querySelector("#kelola-bagikan").onclick = () => bukaSubmenuBagikan(list);
+    body.querySelector("#kelola-hapus").onclick = () => {
       const confirmHtml = `
         <div style="padding:4px 0 8px">
-          <p style="font-size:14.5px;color:var(--ink);line-height:1.45;margin-bottom:18px">
-            Simpanan di dalam koleksi <strong>${esc(list.name)}</strong> tidak akan ikut terhapus, hanya keluar dari koleksi ini.
+          <p style="font-size:14px;line-height:1.5;margin-bottom:18px">
+            Simpanan di dalam koleksi <strong>${esc(list.name)}</strong> tidak ikut terhapus, hanya keluar dari koleksi ini.
           </p>
-          <button class="btn-danger" id="confirm-delete-folder-btn" style="width:100%;height:46px;margin-bottom:8px">Ya, Hapus Koleksi</button>
-          <button class="btn-secondary" id="cancel-delete-folder-btn" style="width:100%;height:44px">Batal</button>
+          <button class="btn-danger" id="btn-konfirmasi-hapus" style="margin-bottom:8px">Ya, Hapus Koleksi</button>
+          <button class="btn-secondary" id="btn-batal-hapus" style="width:100%">Batal</button>
         </div>`;
-      showBottomSheet("Hapus " + list.name + "?", confirmHtml, (cBody) => {
-        cBody.querySelector("#confirm-delete-folder-btn").onclick = async () => {
-          try {
-            await api(`/api/lists/${list.id}`, { method: "DELETE" });
-            closeBottomSheet();
-            toast("Koleksi dihapus");
-            loadHome();
-          } catch {
-            toast("Gagal menghapus koleksi");
-          }
+      bukaLembar("Hapus " + list.name + "?", confirmHtml, (cBody) => {
+        cBody.querySelector("#btn-batal-hapus").onclick = tutupLembar;
+        cBody.querySelector("#btn-konfirmasi-hapus").onclick = () => {
+          const idx = state.lists.findIndex((l) => l.id === list.id);
+          const removed = idx >= 0 ? state.lists.splice(idx, 1)[0] : null;
+          tutupLembar();
+          renderPustaka();
+          hapusTertunda(
+            "Koleksi dihapus",
+            async () => {
+              try { await api(`/api/lists/${list.id}`, { method: "DELETE" }); }
+              catch { toast("Gagal menghapus koleksi"); }
+              muatKoleksi();
+            },
+            () => {
+              if (removed && idx >= 0) state.lists.splice(idx, 0, removed);
+              renderPustaka();
+            }
+          );
         };
-        cBody.querySelector("#cancel-delete-folder-btn").onclick = closeBottomSheet;
       });
     };
   });
 }
 
-/* Layar Arsip */
-async function openArchive() {
-  state.currentListId = null;
-  showScreen("archive");
-  const data = await apiJson("/api/bookmarks?archived=true&limit=50");
-  const items = asArray(data, "bookmarks");
-  // Sembuhkan data lama: simpanan terarsip tidak boleh punya koleksi.
-  try {
-    const perList = await Promise.all((state.lists || []).map(async (l) => {
-      try {
-        const d = await apiJson(`/api/lists/${l.id}/bookmarks?limit=100`);
-        return { list: l, ids: new Set(asArray(d, "bookmarks").map((x) => x.id)) };
-      } catch { return null; }
-    }));
-    for (const item of items) {
-      for (const entry of perList) {
-        if (entry && entry.ids.has(item.id)) {
-          try { await api(`/api/lists/${entry.list.id}/bookmarks/${item.id}`, { method: "DELETE" }); } catch {}
-          if (state.membershipCache) state.membershipCache.delete(item.id);
-        }
-      }
-    }
-  } catch {}
-  $("#archive-count").textContent = items.length + " simpanan diarsipkan";
-  const wrap = $("#archive-items");
-  wrap.innerHTML = items.map(itemCard).join("") || `
-    <div class="empty-state">
-      ${ICONS.mascot}
-      <p>Belum ada simpanan yang diarsipkan.</p>
-    </div>`;
-  bindCards(wrap);
-}
-
-async function segarkanLabelArsip() {
-  try {
-    const data = await apiJson("/api/bookmarks?archived=true&limit=100");
-    const n = asArray(data, "bookmarks").length;
-    const btn = $("#btn-open-archive");
-    if (btn) btn.textContent = n > 0 ? `Arsip (${n})` : "Arsip";
-  } catch {}
-}
-
-/* Sheet Koleksi Baru & Edit */
-function openCollectionSheet(existingList = null) {
-  const isEdit = !!existingList;
-  const initialMeta = isEdit ? parseListMeta(existingList) : { iconKey: "folder", color: SWATCH_COLORS[0] };
-  let selectedColor = initialMeta.color;
-  let selectedIcon = initialMeta.iconKey;
-
-  const colorSwatchesHtml = SWATCH_COLORS.map((c) => {
-    const isSel = c.toLowerCase() === selectedColor.toLowerCase();
-    return `<button type="button" class="swatch-btn ${isSel ? "selected" : ""}" data-color="${c}" style="background:${c}" aria-label="Warna ${c}">
-      ${isSel ? `<span class="swatch-check">${ICONS.check}</span>` : ""}
-    </button>`;
-  }).join("");
-
-  const iconKeys = Object.keys(ICON_SVGS);
-  const iconButtonsHtml = iconKeys.map((k) => {
-    const isSel = k === selectedIcon;
-    return `<button type="button" class="icon-pick-btn ${isSel ? "selected" : ""}" data-icon="${k}" style="${isSel ? `--selected-color:${selectedColor}` : ""}" aria-label="Ikon ${k}">
-      ${ICON_SVGS[k]}
-    </button>`;
-  }).join("");
-
-  const initialName = isEdit ? existingList.name : "";
-
-  const bodyHtml = `
-    <form id="col-sheet-form">
-      <div class="sheet-form-group">
-        <div class="sheet-label-row">
-          <label class="sheet-label" for="col-sheet-name">NAMA</label>
-          <span class="sheet-char-count" id="col-char-count">${initialName.length}/40</span>
-        </div>
-        <input class="sheet-input" id="col-sheet-name" type="text" maxlength="40" placeholder="misal: Resep, Inspirasi Desain..." value="${esc(initialName)}" autocomplete="off" required>
+async function bukaSubmenuBagikan(list) {
+  const data = await getCollaborators(list.id, true);
+  const owner = data ? data.owner : null;
+  const members = data ? (data.collaborators || []) : [];
+  const memberRows = members.map((m) => `
+    <div class="device-row" style="margin-bottom:10px">
+      <div style="flex:1">
+        <span class="dev-name">${esc(m.user.name)}</span>
+        <span class="dev-meta">${esc(m.user.email || "")} · ${m.role === "editor" ? "Editor" : "Penonton"} · ${m.status === "pending" ? "undangan menunggu" : "sudah bergabung"}</span>
       </div>
-
+      <select class="input" style="width:auto;min-height:44px" data-role-change="${esc(m.userId)}">
+        <option value="viewer" ${m.role === "viewer" ? "selected" : ""}>Penonton</option>
+        <option value="editor" ${m.role === "editor" ? "selected" : ""}>Editor</option>
+      </select>
+      <button class="btn-small" type="button" data-remove-member="${esc(m.userId)}">Keluarkan</button>
+    </div>`).join("");
+  const html = `
+    <div style="margin-bottom:16px">
+      ${owner ? `<p style="font-size:13px;color:var(--muted);margin:0 0 10px">Pemilik: ${esc(owner.name)}</p>` : ""}
+      ${memberRows || `<p style="font-size:13px;color:var(--muted)">Belum ada anggota.</p>`}
+    </div>
+    <form id="form-undang">
       <div class="sheet-form-group">
-        <div class="sheet-label-row">
-          <span class="sheet-label">WARNA</span>
-        </div>
-        <div class="color-grid" id="col-color-grid">${colorSwatchesHtml}</div>
+        <label class="sheet-label" for="input-undang-email">Email anggota baru</label>
+        <input class="input" id="input-undang-email" type="email" placeholder="nama@email.com" required autocomplete="off">
       </div>
-
       <div class="sheet-form-group">
-        <div class="sheet-label-row">
-          <span class="sheet-label">IKON</span>
-        </div>
-        <div class="icon-grid" id="col-icon-grid">${iconButtonsHtml}</div>
+        <label class="sheet-label" for="select-undang-peran">Peran</label>
+        <select class="input" id="select-undang-peran">
+          <option value="editor">Editor</option>
+          <option value="viewer">Penonton</option>
+        </select>
       </div>
-
-      <button type="submit" class="btn-primary btn-sheet-submit" id="col-sheet-submit" ${initialName.trim() ? "" : "disabled"}>
-        ${isEdit ? "Simpan" : "Buat koleksi"}
-      </button>
-    </form>`;
-
-  showBottomSheet(isEdit ? "Ubah Koleksi" : "Koleksi Baru", bodyHtml, (body) => {
-    const input = body.querySelector("#col-sheet-name");
-    const counter = body.querySelector("#col-char-count");
-    const submitBtn = body.querySelector("#col-sheet-submit");
-
-    input.addEventListener("input", () => {
-      const len = input.value.length;
-      counter.textContent = `${len}/40`;
-      submitBtn.disabled = !input.value.trim();
-    });
-
-    body.querySelectorAll(".swatch-btn").forEach((btn) => {
-      btn.onclick = () => {
-        selectedColor = btn.dataset.color;
-        body.querySelectorAll(".swatch-btn").forEach((b) => {
-          const sel = b === btn;
-          b.classList.toggle("selected", sel);
-          b.innerHTML = sel ? `<span class="swatch-check">${ICONS.check}</span>` : "";
-        });
-        const activeIconBtn = body.querySelector(".icon-pick-btn.selected");
-        if (activeIconBtn) activeIconBtn.style.setProperty("--selected-color", selectedColor);
+      <button type="submit" class="btn-primary" style="width:100%">Undang</button>
+    </form>
+    <p style="font-size:12px;color:var(--muted);margin-top:10px">Penonton hanya melihat isi. Editor boleh mengkategorikan simpanan ke koleksi ini.</p>`;
+  bukaLembar("Bagikan " + list.name, html, (body) => {
+    body.querySelectorAll("[data-role-change]").forEach((sel) => {
+      sel.onchange = async () => {
+        try {
+          await api(`/api/lists/${list.id}/collaborators/${sel.dataset.roleChange}`, {
+            method: "PATCH", body: JSON.stringify({ role: sel.value }),
+          });
+          state.collaboratorsCache.delete(list.id);
+          toast("Peran diubah");
+        } catch { toast("Gagal mengubah peran"); }
       };
     });
-
-    body.querySelectorAll(".icon-pick-btn").forEach((btn) => {
-      btn.onclick = () => {
-        selectedIcon = btn.dataset.icon;
-        body.querySelectorAll(".icon-pick-btn").forEach((b) => {
-          const sel = b === btn;
-          b.classList.toggle("selected", sel);
-          if (sel) b.style.setProperty("--selected-color", selectedColor);
-          else b.style.removeProperty("--selected-color");
-        });
+    body.querySelectorAll("[data-remove-member]").forEach((btn) => {
+      btn.onclick = async () => {
+        try {
+          await api(`/api/lists/${list.id}/collaborators/${btn.dataset.removeMember}`, { method: "DELETE" });
+          state.collaboratorsCache.delete(list.id);
+          toast("Anggota dikeluarkan");
+          bukaSubmenuBagikan(list);
+        } catch { toast("Gagal mengeluarkan anggota"); }
       };
     });
-
-    body.querySelector("#col-sheet-form").onsubmit = async (e) => {
+    body.querySelector("#form-undang").onsubmit = async (e) => {
       e.preventDefault();
-      const name = input.value.trim();
-      if (!name) return;
-
-      const emoji = ICON_EMOJIS[selectedIcon] || "📁";
-
+      const email = body.querySelector("#input-undang-email").value.trim();
+      const role = body.querySelector("#select-undang-peran").value;
+      if (!email) return;
       try {
-        if (isEdit) {
-          const desc = buildListDescription(existingList.description, selectedIcon, selectedColor);
-          await api(`/api/lists/${existingList.id}`, {
-            method: "PATCH",
-            body: JSON.stringify({ name, icon: emoji, description: desc }),
-          });
-          toast("Koleksi diperbarui");
-        } else {
-          const desc = `poci:${selectedIcon}:${selectedColor}`;
-          await api("/api/lists", {
-            method: "POST",
-            body: JSON.stringify({ name, icon: emoji, description: desc }),
-          });
-          toast("Koleksi dibuat");
-        }
-        closeBottomSheet();
-        loadHome();
-        if (isEdit && state.currentListId === existingList.id) {
-          openCollection(existingList.id);
-        }
-      } catch {
-        toast("Gagal menyimpan koleksi");
-      }
+        await api(`/api/lists/${list.id}/collaborators`, {
+          method: "POST", body: JSON.stringify({ email, role }),
+        });
+        state.collaboratorsCache.delete(list.id);
+        toast("Undangan koleksi dikirim");
+        bukaSubmenuBagikan(list);
+      } catch { toast("Gagal mengundang, periksa emailnya"); }
     };
   });
 }
 
-/* Perpustakaan */
-async function loadLibrary(reset = true) {
-  if (reset) { state.libraryCursor = null; $("#library-items").innerHTML = ""; }
-  const q = "/api/bookmarks?limit=24" + (state.libraryCursor ? "&cursor=" + encodeURIComponent(state.libraryCursor) : "");
-  const data = await apiJson(q);
-  const items = asArray(data, "bookmarks");
-  state.libraryCursor = data.nextCursor || null;
-  $("#btn-load-more").hidden = !state.libraryCursor;
-  $("#library-items").insertAdjacentHTML("beforeend", items.map(itemCard).join(""));
-  bindCards($("#library-items"));
-
-  const tagsData = await apiJson("/api/tags");
-  state.tags = asArray(tagsData, "tags");
-  state.totalBookmarks = data.total ?? items.length;
-
-  $("#stats-panel").innerHTML = `
-    <div class="stat">
-      <span class="stat-icon">${ICONS.collection}</span>
-      <b>${state.lists.length}</b>
-      <span>Koleksi</span>
-    </div>
-    <div class="stat">
-      <span class="stat-icon">${ICONS.bookmark}</span>
-      <b>${state.totalBookmarks}</b>
-      <span>Simpanan</span>
-    </div>
-    <div class="stat">
-      <span class="stat-icon">${ICONS.tag}</span>
-      <b>${state.tags.length}</b>
-      <span>Tag</span>
-    </div>`;
-
-  $("#tag-cloud").innerHTML = state.tags.slice(0, 24).map((t, i) =>
-    `<button class="price-tag" data-tag="${esc(t.name)}" style="background:${TAG_COLORS[i % TAG_COLORS.length]}"><span class="price-tag-hole"></span><span class="price-tag-name">#${esc(t.name)}</span><small>${t.numBookmarks ?? ""}</small></button>`).join("");
-  $("#tag-cloud").querySelectorAll("[data-tag]").forEach((el) =>
-    el.addEventListener("click", () => {
-      showScreen("search");
-      $("#search-input").value = el.dataset.tag;
-      runSearch(el.dataset.tag);
-    }));
-}
-
-/* Pencarian */
-async function openSearch() {
-  showScreen("search");
-  const input = $("#search-input");
-  input.value = "";
-  $("#search-initial").hidden = false;
-  $("#search-results").hidden = true;
-  input.focus();
-
-  // Muat data awal Pustakaku, Terakhir Disimpan, dan Tag Populer
+/* Detail koleksi dengan tiga tampilan */
+async function bukaDetailKoleksi(listId, keepScroll = false) {
+  state.currentListId = listId;
+  const list = state.lists.find((l) => l.id === listId);
+  state.detailReturn = { view: "koleksi" };
+  go("detail-koleksi");
+  const wrap = $("#detail-koleksi-wrap");
+  wrap.innerHTML = `<div class="empty-state"><p>Memuat koleksi...</p></div>`;
   try {
-    const [listsData, bmsData, tagsData] = await Promise.all([
-      apiJson("/api/lists"),
-      apiJson("/api/bookmarks?limit=12"),
-      apiJson("/api/tags"),
-    ]);
-    state.lists = asArray(listsData, "lists");
-    state.tags = asArray(tagsData, "tags");
-    const bms = asArray(bmsData, "bookmarks");
-    const totalBms = bmsData.total ?? bms.length;
-    const favCount = bms.filter((b) => b.favourite).length;
-
-    $("#search-stats-panel").innerHTML = `
-      <div class="stat-card">
-        <span class="stat-icon">${ICONS.collection}</span>
-        <b class="stat-value">${state.lists.length}</b>
-        <span class="stat-label">Koleksi</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-icon">${ICONS.bookmark}</span>
-        <b class="stat-value">${totalBms}</b>
-        <span class="stat-label">Simpanan</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-icon">${ICONS.pinned}</span>
-        <b class="stat-value">${favCount}</b>
-        <span class="stat-label stat-label-compact">Disematkan</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-icon">${ICONS.tag}</span>
-        <b class="stat-value">${state.tags.length}</b>
-        <span class="stat-label">Tag</span>
-      </div>`;
-
-    const recent = bms.slice(0, 6);
-    const recentWrap = $("#search-recent-items");
-    recentWrap.innerHTML = recent.map(itemCard).join("") || `<div class="empty-state"><p>Belum ada simpanan.</p></div>`;
-    bindCards(recentWrap);
-
-    const sortedTags = [...state.tags].sort((a, b) => (b.numBookmarks || 0) - (a.numBookmarks || 0)).slice(0, 10);
-    const tagWrap = $("#search-popular-tags");
-    tagWrap.innerHTML = sortedTags.map((t, i) =>
-      `<button class="price-tag" data-search-tag="${esc(t.name)}" style="background:${TAG_COLORS[i % TAG_COLORS.length]}"><span class="price-tag-hole"></span><span class="price-tag-name">#${esc(t.name)}</span><small>${t.numBookmarks ?? ""}</small></button>`).join("");
-    tagWrap.querySelectorAll("[data-search-tag]").forEach((btn) => {
-      btn.onclick = () => {
-        input.value = btn.dataset.searchTag;
-        runSearch(btn.dataset.searchTag);
-      };
-    });
-  } catch {}
+    const data = await apiJson(`/api/lists/${listId}/bookmarks?limit=100`);
+    state.collectionItems = asArray(data, "bookmarks");
+  } catch {
+    state.collectionItems = [];
+  }
+  const shared = list ? await isSharedList(list) : false;
+  const name = list ? list.name : "Koleksi";
+  wrap.innerHTML = `
+    <button class="btn-back" id="detail-koleksi-back" type="button">‹ Kembali</button>
+    <div style="display:flex;align-items:center;gap:8px">
+      <h1 class="page-title" style="flex:1">${esc(name)}</h1>
+      <button type="button" class="vmenu" id="detail-koleksi-vmenu" aria-label="Kelola koleksi">${icon("dots")}</button>
+    </div>
+    <p class="page-sub">${state.collectionItems.length} simpanan${shared ? " · dibagikan" : ""}${shared ? ' <span class="shared-ic" role="img" aria-label="Koleksi bersama">' + groupSVG() + "</span>" : ""}</p>
+    <div class="view-switch" role="group" aria-label="Tampilan isi koleksi">
+      <button type="button" class="switchbtn ${state.viewMode === "list" ? "active" : ""}" data-viewmode="list" aria-label="Tampilan daftar">${icon("list")}</button>
+      <button type="button" class="switchbtn ${state.viewMode === "tile" ? "active" : ""}" data-viewmode="tile" aria-label="Tampilan ubin">${icon("grid")}</button>
+      <button type="button" class="switchbtn ${state.viewMode === "legacy" ? "active" : ""}" data-viewmode="legacy" aria-label="Tampilan versi lama">${icon("card")}</button>
+    </div>
+    <div id="detail-koleksi-items"></div>`;
+  $("#detail-koleksi-back").onclick = () => go("koleksi");
+  $("#detail-koleksi-vmenu").onclick = () => {
+    if (list) bukaLembarKelola(list, "detail");
+  };
+  wrap.querySelectorAll("[data-viewmode]").forEach((btn) => {
+    btn.onclick = () => {
+      state.viewMode = btn.dataset.viewmode;
+      renderDetailKoleksiItems();
+      wrap.querySelectorAll("[data-viewmode]").forEach((b) =>
+        b.classList.toggle("active", b.dataset.viewmode === state.viewMode));
+    };
+  });
+  renderDetailKoleksiItems();
+  if (keepScroll) window.scrollTo(0, state.koleksiScroll);
 }
-
-let searchDebounce = null;
-async function runSearch(q) {
-  if (!q.trim()) {
-    $("#search-initial").hidden = false;
-    $("#search-results").hidden = true;
+function renderDetailKoleksiItems() {
+  const wrap = $("#detail-koleksi-items");
+  if (!wrap) return;
+  const items = state.collectionItems;
+  if (items.length === 0) {
+    wrap.innerHTML = `<div class="empty-state"><p>Koleksi ini masih kosong.</p></div>`;
     return;
   }
-  $("#search-initial").hidden = true;
-  const wrap = $("#search-results");
-  wrap.hidden = false;
-  wrap.innerHTML = `<div class="empty-state"><p>Mencari...</p></div>`;
-
-  try {
-    const data = await apiJson("/api/bookmarks/search?q=" + encodeURIComponent(q) + "&limit=24");
-    const items = asArray(data, "bookmarks");
-    wrap.innerHTML = items.map(itemCard).join("") || `
-      <div class="empty-state">
-        ${ICONS.mascot}
-        <p>Tidak ada hasil untuk "${esc(q)}".</p>
-      </div>`;
-    bindCards(wrap);
-  } catch {
-    wrap.innerHTML = `<div class="empty-state"><p>Gagal mencari. Periksa koneksimu, lalu coba lagi.</p></div>`;
+  if (state.viewMode === "tile") {
+    wrap.innerHTML = `<div class="tile-grid">${items.map((b) => {
+      const img = cardImage(b);
+      const jenis = jenisKelas(b);
+      const photo = img ? `<img loading="lazy" src="${esc(img)}" alt="">` : `<span>${esc(judulBersih(b).slice(0, 24))}</span>`;
+      return `<button class="tile" data-bookmark="${esc(b.id)}">
+        <div class="tile-photo ${jenis}">${photo}</div>
+        <span class="tile-title">${esc(judulBersih(b))}</span>
+        <span class="tile-meta">${esc(cardSource(b))} · ${esc(timeAgo(b.createdAt))}</span>
+      </button>`;
+    }).join("")}</div>`;
+  } else if (state.viewMode === "legacy") {
+    wrap.innerHTML = `<div class="legacy-grid">${items.map((b) => {
+      const img = cardImage(b);
+      const firstTag = (b.tags || [])[0];
+      const photo = img ? `<img loading="lazy" src="${esc(img)}" alt="">` : `<span>${esc(judulBersih(b).slice(0, 40))}</span>`;
+      return `<button class="legacy-card" data-bookmark="${esc(b.id)}">
+        <div class="legacy-photo">${photo}${firstTag ? `<span class="legacy-chip">#${esc(firstTag.name)}</span>` : ""}</div>
+        <span class="legacy-title">${esc(judulBersih(b))}</span>
+        <span class="legacy-meta">${esc(cardSource(b))} · ${esc(timeAgo(b.createdAt))}</span>
+      </button>`;
+    }).join("")}</div>`;
+  } else {
+    wrap.innerHTML = items.map((b) => `
+      <button class="row-item" data-bookmark="${esc(b.id)}">
+        <span class="row-item-title">${esc(judulBersih(b))}</span>
+        <span class="row-item-meta">${esc(cardSource(b))} · ${esc(timeAgo(b.createdAt))}</span>
+      </button>`).join("");
   }
-}
-
-/* Layar Koleksi Berfitur & Mode Geser */
-async function openCollection(listId) {
-  state.currentListId = listId;
-  state.isSelecting = false;
-  state.selectedBookmarks.clear();
-  $("#collection-select-bar").hidden = true;
-
-  const list = state.lists.find((l) => l.id === listId);
-  $("#collection-title").textContent = list ? list.name : "Koleksi";
-  showScreen("collection");
-
-  const data = await apiJson(`/api/lists/${listId}/bookmarks?limit=50`);
-  state.collectionItems = asArray(data, "bookmarks");
-  renderCollectionGrid();
-}
-
-function renderCollectionGrid() {
-  const listId = state.currentListId;
-  const list = state.lists.find((l) => l.id === listId);
-  const items = [...state.collectionItems];
-  const sort = localStorage.getItem("poci_sort_" + listId) || "newest";
-
-  if (sort === "newest") {
-    items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  } else if (sort === "oldest") {
-    items.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-  } else if (sort === "alpha") {
-    items.sort((a, b) => judulBersih(a).localeCompare(judulBersih(b), "id"));
-  }
-
-  $("#collection-count").textContent = `${items.length} item`;
-  const wrap = $("#collection-items");
-  wrap.innerHTML = items.map(itemCard).join("") || `
-    <div class="empty-state">
-      ${ICONS.mascot}
-      <p>Koleksi ini masih kosong.</p>
-    </div>`;
-  bindCards(wrap);
-
-  $("#btn-collection-swipe").onclick = () => {
-    if (items.length === 0) { toast("Koleksi ini kosong"); return; }
-    openSwipeMode(items, list ? list.name : "Koleksi");
-  };
-
-  $("#btn-collection-menu").onclick = () => openCollectionMenu(list, listId);
-}
-
-function openCollectionMenu(list, listId) {
-  const html = `
-    <div class="sheet-menu-list">
-      <button class="sheet-menu-item" id="cmenu-add-link">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        <span>Tambah Link</span>
-      </button>
-      <button class="sheet-menu-item" id="cmenu-select-multiple">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-        <span>Pilih Banyak</span>
-      </button>
-      <button class="sheet-menu-item" id="cmenu-sort">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="8" y2="18"/></svg>
-        <span>Urutkan</span>
-      </button>
-      <button class="sheet-menu-item" id="cmenu-share">
-        ${ICONS.share} <span>Bagikan Koleksi</span>
-      </button>
-    </div>`;
-
-  showBottomSheet(list ? list.name : "Menu Koleksi", html, (body) => {
-    body.querySelector("#cmenu-add-link").onclick = () => {
-      const formHtml = `
-        <form id="add-link-form" style="padding-top:4px">
-          <div class="sheet-form-group">
-            <label class="sheet-label" for="add-link-input">URL LINK</label>
-            <input class="sheet-input" id="add-link-input" type="url" placeholder="https://..." required autocomplete="off" style="margin-top:8px">
-          </div>
-          <button type="submit" class="btn-primary btn-sheet-submit">Simpan ke Koleksi</button>
-        </form>`;
-      showBottomSheet("Tambah Link ke Koleksi", formHtml, (fBody) => {
-        const inp = fBody.querySelector("#add-link-input");
-        setTimeout(() => inp.focus(), 100);
-        fBody.querySelector("#add-link-form").onsubmit = async (e) => {
-          e.preventDefault();
-          const url = inp.value.trim();
-          if (!url) return;
-          try {
-            const r = await api("/api/bookmarks", { method: "POST", body: JSON.stringify({ type: "link", url }) });
-            if (r.ok) {
-              const created = await r.json();
-              const bid = created.id || created.bookmark?.id;
-              if (bid) {
-                await api(`/api/lists/${listId}/bookmarks/${bid}`, { method: "PUT" });
-                await masukBelumDibuka(bid);
-              }
-              closeBottomSheet();
-              toast("Tersimpan ke koleksi");
-              openCollection(listId);
-            }
-          } catch {
-            toast("Gagal menambahkan link");
-          }
-        };
-      });
-    };
-
-    body.querySelector("#cmenu-select-multiple").onclick = () => {
-      closeBottomSheet();
-      state.isSelecting = true;
-      state.selectedBookmarks.clear();
-      $("#collection-select-bar").hidden = false;
-      renderCollectionGrid();
-    };
-
-    body.querySelector("#cmenu-sort").onclick = () => {
-      const currentSort = localStorage.getItem("poci_sort_" + listId) || "newest";
-      const sortHtml = `
-        <div style="display:flex;flex-direction:column;gap:10px;padding:4px 0 12px">
-          <label style="display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;cursor:pointer">
-            <input type="radio" name="col_sort" value="newest" ${currentSort === "newest" ? "checked" : ""}> Terbaru
-          </label>
-          <label style="display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;cursor:pointer">
-            <input type="radio" name="col_sort" value="oldest" ${currentSort === "oldest" ? "checked" : ""}> Terlama
-          </label>
-          <label style="display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;cursor:pointer">
-            <input type="radio" name="col_sort" value="alpha" ${currentSort === "alpha" ? "checked" : ""}> Judul A-Z
-          </label>
-        </div>`;
-      showBottomSheet("Urutkan Simpanan", sortHtml, (sBody) => {
-        sBody.querySelectorAll("input[name=col_sort]").forEach((radio) => {
-          radio.onchange = () => {
-            localStorage.setItem("poci_sort_" + listId, radio.value);
-            closeBottomSheet();
-            renderCollectionGrid();
-          };
-        });
-      });
-    };
-
-    body.querySelector("#cmenu-share").onclick = async () => {
-      closeBottomSheet();
-      try {
-        await api(`/api/lists/${listId}`, { method: "PATCH", body: JSON.stringify({ public: true }) });
-        const cfg = await apiJson("/api/config");
-        const pubBase = (cfg && cfg.karakeep_public_url) || "http://ai-core:3000";
-        const shareUrl = `${pubBase.replace(/\/$/, "")}/public/lists/${listId}`;
-        if (navigator.share) {
-          try {
-            await navigator.share({ title: list ? list.name : "Koleksi", url: shareUrl });
-            toast("Tautan dibagikan");
-            return;
-          } catch {}
-        }
-        await navigator.clipboard.writeText(shareUrl);
-        toast("Tautan koleksi disalin");
-      } catch {
-        toast("Gagal membagikan");
-      }
-    };
+  wrap.querySelectorAll("[data-bookmark]").forEach((el) => {
+    el.addEventListener("click", () => {
+      bukaDetailSimpanan(el.dataset.bookmark, { view: "detail-koleksi", listId: state.currentListId });
+    });
   });
 }
 
-$("#btn-select-remove").onclick = async () => {
-  const ids = Array.from(state.selectedBookmarks);
-  if (ids.length === 0) { toast("Pilih simpanan dulu"); return; }
-  for (const bid of ids) {
-    await api(`/api/lists/${state.currentListId}/bookmarks/${bid}`, { method: "DELETE" }).catch(() => {});
+/* Beresin Kantong: layar penuh, satu kartu, kategori wajib */
+function bukaBeresin() {
+  if (state.kantongItems.length === 0) {
+    toast("Kantong rapi, tidak ada yang dibereskan");
+    return;
   }
-  toast(`${ids.length} dikeluarkan dari koleksi`);
-  state.selectedBookmarks.clear();
-  state.isSelecting = false;
-  $("#collection-select-bar").hidden = true;
-  openCollection(state.currentListId);
-};
-
-$("#btn-select-delete").onclick = async () => {
-  const ids = Array.from(state.selectedBookmarks);
-  if (ids.length === 0) { toast("Pilih simpanan dulu"); return; }
-  if (!confirm(`Hapus permanen ${ids.length} simpanan terpilih?`)) return;
-  for (const bid of ids) {
-    await api(`/api/bookmarks/${bid}`, { method: "DELETE" }).catch(() => {});
-  }
-  toast(`${ids.length} simpanan dihapus`);
-  state.selectedBookmarks.clear();
-  state.isSelecting = false;
-  $("#collection-select-bar").hidden = true;
-  openCollection(state.currentListId);
-};
-
-$("#btn-select-done").onclick = () => {
-  state.isSelecting = false;
-  state.selectedBookmarks.clear();
-  $("#collection-select-bar").hidden = true;
-  renderCollectionGrid();
-};
-
-/* Mode Geser Koleksi */
-function openSwipeMode(items, title) {
-  state.isSwipeMode = true;
-  state.swipeTitle = title;
-  state.focusQueue = items;
+  state.focusQueue = [...state.kantongItems];
   state.focusIndex = 0;
-  showScreen("focus");
-  renderFocusCard();
+  $("#focuslay").hidden = false;
+  document.body.classList.add("focus-open");
+  renderFocus();
 }
-
-/* Resolver Keanggotaan Koleksi Nyata */
-async function resolveBookmarkLists(bookmarkId, forceRefresh = false) {
-  if (!state.membershipCache) state.membershipCache = new Map();
-  if (!forceRefresh && state.membershipCache.has(bookmarkId)) {
-    return state.membershipCache.get(bookmarkId);
-  }
-
-  if (!state.lists || !state.lists.length) {
-    const ld = await apiJson("/api/lists");
-    state.lists = asArray(ld, "lists");
-  }
-
-  const results = await Promise.all(
-    state.lists.map(async (l) => {
-      try {
-        const bmsData = await apiJson(`/api/lists/${l.id}/bookmarks?limit=100`);
-        const bms = asArray(bmsData, "bookmarks");
-        return bms.some((item) => item.id === bookmarkId) ? l : null;
-      } catch {
-        return null;
-      }
-    })
-  );
-  const containingLists = results.filter(Boolean);
-  state.membershipCache.set(bookmarkId, containingLists);
-  return containingLists;
+function tutupBeresin() {
+  $("#focuslay").hidden = true;
+  document.body.classList.remove("focus-open");
+  $("#toast").hidden = true;
+  muatKantong();
+  go("koleksi");
 }
+$("#focus-x").addEventListener("click", tutupBeresin);
 
-/* Layar Detail Kaya Aksi */
-async function openDetail(id) {
-  showScreen("detail");
-  const wrap = $("#screen-detail");
-  wrap.innerHTML = `<div class="empty-state"><p>Memuat detail...</p></div>`;
-
-  const [b, listsData] = await Promise.all([
-    apiJson("/api/bookmarks/" + id),
-    apiJson("/api/lists"),
-  ]);
-  state.lists = asArray(listsData, "lists");
-  const containingLists = await resolveBookmarkLists(id);
-
+async function renderFocus() {
+  const segs = $("#focus-segs");
+  const body = $("#focus-body");
+  const q = state.focusQueue;
+  segs.innerHTML = q.map((_, i) => `<i class="${i <= state.focusIndex ? "done" : ""}"></i>`).join("");
+  if (state.focusIndex >= q.length || q.length === 0) {
+    body.innerHTML = `
+      <div class="beres">
+        <h2>Beres!</h2>
+        <p>Kantong kosong. Beresin Kantong menyapa lagi saat ada simpanan baru.</p>
+        <button class="btn-primary" id="beres-ke-koleksi" type="button">Buka Koleksi</button>
+      </div>`;
+    $("#beres-ke-koleksi").onclick = tutupBeresin;
+    return;
+  }
+  const b = q[state.focusIndex];
   const c = b.content || {};
   const img = cardImage(b);
-
-  // Koleksi pemilik bookmark ini, dari keanggotaan nyata di API
-  const parentList = containingLists[0] || null;
-  const listMeta = parentList ? parseListMeta(parentList) : null;
-  const listChipText = parentList ? esc(parentList.name) : "Tanpa koleksi";
-  const listChipDot = parentList ? `<span class="chip-collection-dot" style="background:${listMeta.color}"></span>` : "";
-
-  const tagsHtml = (b.tags || []).map((t) => `
-    <span class="price-tag tag-pill-removable" style="background:#FED264">
-      <span class="price-tag-hole"></span>
-      <span class="price-tag-name">#${esc(t.name)}</span>
-      <button class="tag-del-btn" data-del-tag="${esc(t.name)}" aria-label="Hapus tag">&times;</button>
-    </span>`).join("");
-
-  const urlText = c.url || "";
-  const displayUrl = urlText.replace(/^https?:\/\/(www\.)?/, "");
-
-  wrap.innerHTML = `
-    <header class="sub-top">
-      <button class="btn-square" id="detail-back-btn" aria-label="Kembali">${ICONS.arrowLeft}</button>
-      <h2>Detail Simpanan</h2>
-    </header>
-
-    ${img ? `<div class="detail-photo-wrap"><img src="${esc(img)}" alt=""></div>` : ""}
-
-    <div class="detail-title-wrap">
-      <h1 class="detail-title" id="detail-title-text">${esc(judulBersih(b, true))}</h1>
-      <button class="btn-pencil" id="detail-pencil-btn" aria-label="Edit Judul">${ICONS.pencil}</button>
-    </div>
-
-    <div id="detail-title-editor" class="detail-inline-edit" hidden>
-      <input type="text" class="detail-inline-input" id="detail-title-input" value="${esc(b.title || c.title || "")}">
-      <div class="detail-inline-buttons">
-        <button class="btn-secondary" id="detail-title-cancel" style="height:36px;padding:0 14px;font-size:13px">Batal</button>
-        <button class="btn-primary" id="detail-title-save" style="height:36px;padding:0 16px;font-size:13px">Simpan</button>
+  const descClean = deskripsiBersih(b);
+  const tags = (b.tags || []).slice(0, 3).map((t) =>
+    `<span class="tag-chip">#${esc(t.name)}</span>`).join("");
+  const manual = state.lists.filter(isManualList);
+  const sharedFlags = {};
+  await Promise.all(manual.map(async (l) => { sharedFlags[l.id] = await isSharedList(l); }));
+  const editorFlags = {};
+  await Promise.all(manual.map(async (l) => {
+    editorFlags[l.id] = true;
+    if (!sharedFlags[l.id]) return;
+    const data = await getCollaborators(l.id);
+    if (!data) return;
+    const meId = state.me ? state.me.karakeep_user_id : null;
+    const mine = (data.collaborators || []).find((m) => m.userId === meId);
+    const isOwner = data.owner && meId && data.owner.id === meId;
+    if (!isOwner && mine && mine.role !== "editor") editorFlags[l.id] = false;
+  }));
+  body.innerHTML = `
+    <div class="fcardbox">
+      <div class="fcard">
+        <p class="fcard-source">${esc(cardSource(b))} · ${esc(timeAgo(b.createdAt))}</p>
+        ${img ? `<div class="fcard-photo"><img src="${esc(img)}" alt=""></div>` : ""}
+        <h3 class="fcard-title">${esc(judulBersih(b))}</h3>
+        ${descClean ? `<p class="fcard-desc">${esc(descClean.slice(0, 200))}</p>` : ""}
+        ${tags ? `<div style="margin-top:10px">${tags}</div>` : ""}
       </div>
-    </div>
-
-    <div class="detail-meta-row">
-      <button class="chip-collection-meta" id="detail-chip-col-btn">
-        ${listChipDot}
-        <span>${listChipText}</span>
-      </button>
-      <span class="detail-date-text">${formatDateTime(b.createdAt)}</span>
-    </div>
-
-    ${c.type === "link" ? `
-      <a class="btn-primary btn-detail-open" href="${esc(c.url)}" target="_blank" rel="noopener">
-        <span>Buka link</span>
-        <span class="btn-detail-url">${esc(displayUrl)}</span>
-      </a>` : ""}
-
-    <div class="detail-action-bar">
-      <button class="detail-action-tile" id="daction-share">
-        ${ICONS.share}
-        <span>Bagikan</span>
-      </button>
-      <button class="detail-action-tile" id="daction-move">
-        ${ICONS.move}
-        <span>Pindah</span>
-      </button>
-      ${c.type === "link" ? `
-        <button class="detail-action-tile" id="daction-recrawl">
-          ${ICONS.refresh}
-          <span>Segarkan</span>
-        </button>` : ""}
-      <button class="detail-action-tile danger" id="daction-delete">
-        ${ICONS.trash}
-        <span>Hapus</span>
-      </button>
-    </div>
-
-    <div style="margin-bottom:16px">
-      <button class="btn-secondary" id="detail-archive" style="width:100%;height:40px;font-size:13.5px">
-        ${b.archived ? "Keluarkan dari arsip" : "Arsipkan"}
-      </button>
-    </div>
-
-    <div class="detail-section-card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <h3 style="margin:0">Tag</h3>
-        <button class="btn-add-tag" id="btn-show-add-tag">+ Tambah</button>
-      </div>
-      <div id="add-tag-form-wrap" hidden style="margin-bottom:10px">
-        <div style="display:flex;gap:6px">
-          <input type="text" id="new-tag-input" class="sheet-input" placeholder="Nama tag..." style="height:38px;font-size:13.5px">
-          <button class="btn-primary" id="new-tag-save" style="height:38px;padding:0 14px;font-size:13px">Simpan</button>
+      <div class="fpick">
+        <p class="fpick-label">Pilih satu koleksi untuk simpanan ini:</p>
+        ${manual.map((l) => `
+          <button class="fpick-btn" type="button" data-pilih="${esc(l.id)}" ${editorFlags[l.id] ? "" : "disabled"}>
+            ${icon("folder")}
+            <span>${esc(l.name)}${sharedFlags[l.id] ? ' <span class="shared-ic" role="img" aria-label="Koleksi bersama">' + groupSVG() + "</span>" : ""}</span>
+            ${editorFlags[l.id] ? "" : '<span style="margin-left:auto;font-size:12px;color:var(--muted)">Penonton</span>'}
+          </button>`).join("") || `<p style="font-size:13px;color:var(--muted)">Belum ada koleksi. Buat satu di bawah.</p>`}
+        <button class="fpick-btn" type="button" id="fpick-baru">＋ Kategori baru</button>
+        <div id="fpick-baru-form" hidden>
+          <form id="form-kategori-baru" style="display:flex;gap:8px">
+            <input class="input" id="input-kategori-baru" type="text" placeholder="Nama kategori" required autocomplete="off" style="flex:1">
+            <button class="btn-primary" type="submit">Buat dan masukkan</button>
+          </form>
         </div>
       </div>
-      <div class="tag-cloud" id="detail-tag-cloud">${tagsHtml}</div>
-    </div>
+      <div class="frow-act">
+        <button class="btn-buang" type="button" id="focus-buang">${icon("trash")}<span>Buang</span></button>
+      </div>
+    </div>`;
+  body.querySelectorAll("[data-pilih]").forEach((btn) => {
+    btn.onclick = async () => {
+      try {
+        await api(`/api/kantong/${b.id}/categorize`, {
+          method: "POST", body: JSON.stringify({ listId: btn.dataset.pilih }),
+        });
+        state.membershipCache.delete(b.id);
+        state.focusIndex += 1;
+        state.kantongItems = state.kantongItems.filter((x) => x.id !== b.id);
+        state.kantongCount = state.kantongItems.length;
+        perbaruiPil();
+        renderFocus();
+      } catch { toast("Gagal mengkategorikan, coba lagi"); }
+    };
+  });
+  const baruBtn = body.querySelector("#fpick-baru");
+  baruBtn.onclick = () => {
+    body.querySelector("#fpick-baru-form").hidden = false;
+    body.querySelector("#input-kategori-baru").focus();
+  };
+  body.querySelector("#form-kategori-baru").onsubmit = async (e) => {
+    e.preventDefault();
+    const name = body.querySelector("#input-kategori-baru").value.trim();
+    if (!name) return;
+    try {
+      const r = await api("/api/lists", { method: "POST", body: JSON.stringify({ name }) });
+      const created = await r.json();
+      const listId = created.id || created.list?.id;
+      if (listId) {
+        state.lists.push(created.list || created);
+        await api(`/api/kantong/${b.id}/categorize`, {
+          method: "POST", body: JSON.stringify({ listId }),
+        });
+        toast(`Masuk ke ${name}`);
+      }
+      state.membershipCache.delete(b.id);
+      state.focusIndex += 1;
+      state.kantongItems = state.kantongItems.filter((x) => x.id !== b.id);
+      state.kantongCount = state.kantongItems.length;
+      perbaruiPil();
+      renderFocus();
+    } catch { toast("Gagal membuat kategori"); }
+  };
+  body.querySelector("#focus-buang").onclick = () => {
+    const idx = state.focusIndex;
+    const removed = state.focusQueue.splice(idx, 1)[0];
+    state.kantongItems = state.kantongItems.filter((x) => x.id !== removed.id);
+    state.kantongCount = state.kantongItems.length;
+    perbaruiPil();
+    renderFocus();
+    hapusTertunda(
+      "Simpanan dibuang",
+      async () => {
+        try { await api(`/api/bookmarks/${removed.id}`, { method: "DELETE" }); }
+        catch { toast("Gagal membuang simpanan"); }
+        muatKantong();
+      },
+      () => {
+        state.focusQueue.splice(idx, 0, removed);
+        state.kantongItems.unshift(removed);
+        state.kantongCount = state.kantongItems.length;
+        state.focusIndex = idx;
+        perbaruiPil();
+        renderFocus();
+      }
+    );
+  };
+}
 
-    <div class="detail-section-card">
-      <h3 style="margin-bottom:8px">Catatan</h3>
-      <textarea id="detail-note-input" class="detail-note-area" placeholder="Ketuk untuk menambah catatan...">${esc(b.note || "")}</textarea>
-      <div style="display:flex;justify-content:flex-end;margin-top:8px">
-        <button class="btn-secondary" id="detail-note-save" style="height:36px;padding:0 16px;font-size:13px;font-weight:700">Simpan Catatan</button>
+/* Detail simpanan: satu baris empat ikon */
+async function bukaDetailSimpanan(id, ret) {
+  state.detailReturn = ret || { view: "koleksi" };
+  go("detail-simpanan");
+  const wrap = $("#detail-simpanan-wrap");
+  wrap.innerHTML = `<div class="empty-state"><p>Memuat detail...</p></div>`;
+  let b;
+  try {
+    b = await apiJson("/api/bookmarks/" + id);
+  } catch {
+    wrap.innerHTML = `<div class="empty-state"><p>Gagal memuat simpanan.</p></div>`;
+    return;
+  }
+  const containing = await resolveBookmarkLists(id);
+  const parentList = containing[0] || null;
+  const c = b.content || {};
+  const img = cardImage(b);
+  const urlText = c.url || "";
+  const displayUrl = urlText.replace(/^https?:\/\/(www\.)?/, "");
+  const tagsHtml = (b.tags || []).map((t) => `
+    <span class="tag-chip">#${esc(t.name)}
+      <button data-del-tag="${esc(t.name)}" aria-label="Hapus tag" style="border:none;background:none;font-weight:800;cursor:pointer;padding:0 0 0 4px">×</button>
+    </span>`).join("");
+  wrap.innerHTML = `
+    <button class="btn-back" id="detail-back" type="button">‹ Kembali</button>
+    ${img ? `<img class="detail-photo" src="${esc(img)}" alt="">` : ""}
+    <div style="display:flex;gap:8px;align-items:flex-start">
+      <h1 class="detail-title" id="detail-title-text" style="flex:1">${esc(judulBersih(b, true))}</h1>
+      <button class="btn-small" id="detail-pencil" type="button" aria-label="Edit Judul">${icon("pencil")}</button>
+    </div>
+    <div id="detail-title-editor" hidden>
+      <input class="input" id="detail-title-input" type="text" value="${esc(b.title || c.title || "")}">
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn-secondary" id="detail-title-cancel" type="button">Batal</button>
+        <button class="btn-primary" id="detail-title-save" type="button">Simpan</button>
       </div>
     </div>
+    <p class="detail-meta">${esc(parentList ? parentList.name : "Tanpa koleksi")} · ${esc(formatDateTime(b.createdAt))}${b.archived ? " · diarsipkan" : ""}</p>
+    ${c.type === "link" ? `
+      <a class="btn-primary" href="${esc(c.url)}" target="_blank" rel="noopener" style="width:100%;text-decoration:none;margin-bottom:12px">
+        <span>Buka link</span>
+        <span style="font-weight:500;font-size:12px">${esc(displayUrl)}</span>
+      </a>` : ""}
+    <div class="action-row">
+      <button class="action-btn" type="button" id="daction-pindah">${icon("move")}<span>Pindah</span></button>
+      <button class="action-btn" type="button" id="daction-arsip">${icon("archive")}<span>${b.archived ? "Batal Arsip" : "Arsip"}</span></button>
+      <button class="action-btn" type="button" id="daction-sumber">${icon("open")}<span>Sumber</span></button>
+      <button class="action-btn danger" type="button" id="daction-buang">${icon("trash")}<span>Buang</span></button>
+    </div>
+    <div class="detail-section">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3>Tag</h3>
+        <button class="btn-small" id="btn-show-add-tag" type="button">＋ Tambah</button>
+      </div>
+      <div id="add-tag-form-wrap" hidden style="margin:10px 0">
+        <div style="display:flex;gap:8px">
+          <input type="text" id="new-tag-input" class="input" placeholder="Nama tag..." style="flex:1">
+          <button class="btn-primary" id="new-tag-save" type="button">Simpan</button>
+        </div>
+      </div>
+      <div>${tagsHtml || `<p style="font-size:13px;color:var(--muted)">Belum ada tag. Tag AI muncul sendiri sesudah crawl selesai.</p>`}</div>
+    </div>
+    <div class="detail-section">
+      <h3>Catatan</h3>
+      <textarea id="detail-note-input" class="detail-note" placeholder="Ketuk untuk menambah catatan...">${esc(b.note || "")}</textarea>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px">
+        <button class="btn-secondary" id="detail-note-save" type="button">Simpan Catatan</button>
+      </div>
+    </div>
+    ${b.summary ? `<div class="detail-section"><h3>Ringkasan AI</h3><p>${esc(b.summary)}</p></div>` : ""}
+    ${c.description ? `<div class="detail-section"><h3>Deskripsi</h3><p>${esc(c.description)}</p></div>` : ""}
+    ${c.type === "text" ? `<div class="detail-section"><p style="white-space:pre-wrap">${esc(c.text || "")}</p></div>` : ""}`;
 
-    ${b.summary ? `
-      <div class="detail-section-card">
-        <h3>Ringkasan AI</h3>
-        <p>${esc(b.summary)}</p>
-      </div>` : ""}
-
-    ${c.description ? `
-      <div class="detail-section-card">
-        <h3>Deskripsi</h3>
-        <p>${esc(c.description)}</p>
-      </div>` : ""}
-
-    ${c.type === "text" ? `
-      <div class="detail-section-card">
-        <p style="white-space:pre-wrap">${esc(c.text || "")}</p>
-      </div>` : ""}`;
-
-  $("#detail-back-btn").onclick = () => {
-    if (state.currentListId) {
-      openCollection(state.currentListId);
-    } else if (state.detailPreviousScreen === "search") {
-      showScreen("search");
-    } else if (state.detailPreviousScreen === "library") {
-      showScreen("library");
-      loadLibrary(false);
-    } else if (state.detailPreviousScreen === "archive") {
-      openArchive();
-    } else {
-      showScreen("home");
-      loadHome();
-    }
-  };
-
-  // Edit judul sebaris
+  $("#detail-back").onclick = kembaliDariDetail;
   const titleTextEl = $("#detail-title-text");
   const editorEl = $("#detail-title-editor");
-  const pencilBtn = $("#detail-pencil-btn");
-  pencilBtn.onclick = () => {
+  $("#detail-pencil").onclick = () => {
     editorEl.hidden = false;
-    titleTextEl.parentElement.hidden = true;
+    titleTextEl.hidden = true;
     $("#detail-title-input").focus();
   };
   $("#detail-title-cancel").onclick = () => {
     editorEl.hidden = true;
-    titleTextEl.parentElement.hidden = false;
+    titleTextEl.hidden = false;
   };
   $("#detail-title-save").onclick = async () => {
     const newTitle = $("#detail-title-input").value.trim();
     if (!newTitle) return;
     try {
       await api(`/api/bookmarks/${id}`, { method: "PATCH", body: JSON.stringify({ title: newTitle }) });
-      b.title = newTitle;
       titleTextEl.textContent = newTitle;
       editorEl.hidden = true;
-      titleTextEl.parentElement.hidden = false;
+      titleTextEl.hidden = false;
       toast("Judul diperbarui");
-    } catch {
-      toast("Gagal mengubah judul");
-    }
+    } catch { toast("Gagal mengubah judul"); }
   };
 
-  // Pindah koleksi (chip meta dan aksi Pindah)
-  const handleMove = () => {
-    const currentListId = parentList ? parentList.id : "";
+  const handlePindah = () => {
+    const currentId = parentList ? parentList.id : "";
     const listsHtml = `
       <div style="display:flex;flex-direction:column;gap:8px;padding:4px 0 16px">
-        ${state.lists.map((l) => {
-          const isCurrent = currentListId === l.id;
-          const meta = parseListMeta(l);
-          return `
-            <label class="sheet-menu-item" style="cursor:pointer">
-              <input type="radio" name="move_dest" value="${l.id}" ${isCurrent ? "checked" : ""}>
-              <span class="chip-collection-dot" style="background:${meta.color}"></span>
-              <span>${esc(l.name)}</span>
-            </label>`;
-        }).join("")}
+        ${state.lists.filter(isManualList).map((l) => `
+          <label class="sheet-menu-item" style="cursor:pointer">
+            <input type="radio" name="move_dest" value="${l.id}" ${l.id === currentId ? "checked" : ""}>
+            <span>${esc(l.name)}</span>
+          </label>`).join("")}
       </div>`;
-
-    showBottomSheet("Pindahkan Simpanan", listsHtml, (mBody) => {
+    bukaLembar("Pindahkan Simpanan", listsHtml, (mBody) => {
       mBody.querySelectorAll("input[name=move_dest]").forEach((radio) => {
         radio.onchange = async () => {
           const destId = radio.value;
-          closeBottomSheet();
+          if (destId === currentId) { tutupLembar(); return; }
+          tutupLembar();
           try {
-            let deleteFailed = false;
-            // Pindah = PUT ke tujuan, lalu DELETE dari semua list lain yang memuatnya
-            await api(`/api/lists/${destId}/bookmarks/${id}`, { method: "PUT" });
-            const toRemove = containingLists.filter((l) => l.id !== destId);
-            for (const l of toRemove) {
-              try {
-                await api(`/api/lists/${l.id}/bookmarks/${id}`, { method: "DELETE" });
-              } catch {
-                deleteFailed = true;
-              }
-            }
-            if (deleteFailed) {
-              toast("Sebagian gagal dipindahkan, coba lagi");
-            } else {
-              const destList = state.lists.find((l) => l.id === destId);
-              toast(`Dipindahkan ke ${destList ? destList.name : "Koleksi"}`);
-            }
-            // Memilih koleksi dari dalam Arsip otomatis mengeluarkan dari arsip
+            await api(`/api/kantong/${id}/categorize`, {
+              method: "POST", body: JSON.stringify({ listId: destId }),
+            });
+            const destList = state.lists.find((l) => l.id === destId);
+            toast(`Dipindahkan ke ${destList ? destList.name : "Koleksi"}`);
             if (b.archived) {
-              try {
-                await api("/api/bookmarks/" + id, { method: "PATCH", body: JSON.stringify({ archived: false }) });
-                b.archived = false;
-                toast("Dipindahkan dan dikeluarkan dari arsip");
-              } catch {}
+              await api("/api/bookmarks/" + id, { method: "PATCH", body: JSON.stringify({ archived: false }) });
+              b.archived = false;
             }
-            // Segarkan cache keanggotaan dan render ulang detail
-            await resolveBookmarkLists(id, true);
-            openDetail(id);
-          } catch {
-            toast("Gagal memindahkan");
-          }
+            state.membershipCache.delete(id);
+            bukaDetailSimpanan(id, ret);
+          } catch { toast("Gagal memindahkan"); }
         };
       });
     });
   };
+  $("#daction-pindah").onclick = handlePindah;
 
-  $("#detail-chip-col-btn").onclick = handleMove;
-  $("#daction-move").onclick = handleMove;
-
-  $("#daction-share").onclick = async () => {
-    const shareTitle = judulBersih(b);
-    const shareUrl = c.url || window.location.href;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: shareTitle, url: shareUrl });
-        toast("Tautan dibagikan");
-        return;
-      } catch {}
-    }
-    await navigator.clipboard.writeText(shareUrl);
-    toast("Tautan disalin");
-  };
-
-  // Segarkan (recrawl) - hanya dirender untuk simpanan berjenis link.
-  // Kegagalan cukup diberi toast; tombol tidak pernah disembunyikan.
-  const recrawlBtn = $("#daction-recrawl");
-  if (recrawlBtn) {
-    recrawlBtn.onclick = async () => {
-      recrawlBtn.classList.add("loading");
-      try {
-        const r = await api(`/api/bookmarks/${id}/recrawl`, { method: "POST" });
-        if (r.ok) {
-          toast("Penyegaran dimulai, data diperbarui di latar");
-          openDetail(id);
-        } else {
-          toast("Gagal menyegarkan");
+  $("#daction-arsip").onclick = async () => {
+    try {
+      if (!b.archived) {
+        for (const l of containing) {
+          await api(`/api/lists/${l.id}/bookmarks/${id}`, { method: "DELETE" }).catch(() => {});
         }
-      } catch {
-        toast("Gagal menyegarkan");
-      } finally {
-        recrawlBtn.classList.remove("loading");
-      }
-    };
-  }
-
-  $("#daction-delete").onclick = async () => {
-    if (!confirm("Hapus simpanan ini?")) return;
-    await api("/api/bookmarks/" + id, { method: "DELETE" });
-    toast("Simpanan dihapus");
-    if (state.currentListId) openCollection(state.currentListId);
-    else { showScreen("home"); loadHome(); }
-  };
-
-  // Arsipkan / keluarkan dari arsip.
-  // Aturan user 22 Okt 2026: mengarsipkan mengeluarkan simpanan dari SEMUA koleksi
-  // (arsip berada di luar sistem folder); mengeluarkan dari arsip menaruh simpanan
-  // ke folder Tanpa Kategori bila ia tidak berkoleksi.
-  $("#detail-archive").onclick = async () => {
-    if (!b.archived) {
-      let gagal = false;
-      for (const l of containingLists) {
-        try {
-          await api(`/api/lists/${l.id}/bookmarks/${id}`, { method: "DELETE" });
-        } catch { gagal = true; }
-      }
-      try {
         await api("/api/bookmarks/" + id, { method: "PATCH", body: JSON.stringify({ archived: true }) });
-      } catch { gagal = true; }
-      if (state.membershipCache) state.membershipCache.delete(id);
-      toast(gagal ? "Sebagian gagal diarsipkan, coba lagi" : "Diarsipkan dan dikeluarkan dari semua koleksi");
-      $("#detail-back-btn").click();
-    } else {
-      await api("/api/bookmarks/" + id, { method: "PATCH", body: JSON.stringify({ archived: false }) });
-      let pesan = "Dikeluarkan dari arsip";
-      if (!containingLists.length) {
-        const kat = state.lists.find((l) => /belum ada kategori|tanpa kategori/i.test(l.name));
-        if (kat) {
-          try {
-            await api(`/api/lists/${kat.id}/bookmarks/${id}`, { method: "PUT" });
-            pesan = "Dikeluarkan dari arsip ke Tanpa Kategori";
-          } catch {}
-        }
+        toast("Diarsipkan dan dikeluarkan dari semua koleksi");
+      } else {
+        await api("/api/bookmarks/" + id, { method: "PATCH", body: JSON.stringify({ archived: false }) });
+        toast("Dikeluarkan dari arsip ke Kantong");
       }
-      if (state.membershipCache) state.membershipCache.delete(id);
-      toast(pesan);
-      $("#detail-back-btn").click();
-    }
+      state.membershipCache.delete(id);
+      kembaliDariDetail();
+      muatKantong();
+    } catch { toast("Gagal mengubah arsip"); }
   };
 
-  // Tambah & Lepas Tag
+  $("#daction-sumber").onclick = () => {
+    if (c.type === "link" && c.url) window.open(c.url, "_blank");
+    else toast("Simpanan ini tidak punya sumber tautan");
+  };
+
+  $("#daction-buang").onclick = () => {
+    kembaliDariDetail();
+    hapusTertunda(
+      "Simpanan dibuang",
+      async () => {
+        try { await api(`/api/bookmarks/${id}`, { method: "DELETE" }); }
+        catch { toast("Gagal membuang simpanan"); }
+        muatKantong();
+      },
+      () => { bukaDetailSimpanan(id, ret); }
+    );
+  };
+
   const addTagForm = $("#add-tag-form-wrap");
   $("#btn-show-add-tag").onclick = () => {
     addTagForm.hidden = !addTagForm.hidden;
@@ -1507,249 +1059,596 @@ async function openDetail(id) {
     const currentTags = (b.tags || []).map((t) => t.name);
     if (!currentTags.includes(tagName)) currentTags.push(tagName);
     try {
-      await api(`/api/bookmarks/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ tags: currentTags }),
-      });
+      await api(`/api/bookmarks/${id}`, { method: "PATCH", body: JSON.stringify({ tags: currentTags }) });
       toast("Tag ditambahkan");
-      openDetail(id);
-    } catch {
-      toast("Gagal menambah tag");
-    }
+      bukaDetailSimpanan(id, ret);
+    } catch { toast("Gagal menambah tag"); }
   };
-
   wrap.querySelectorAll("[data-del-tag]").forEach((btn) => {
-    btn.onclick = async (e) => {
-      e.stopPropagation();
+    btn.onclick = async () => {
       const delName = btn.dataset.delTag;
       const updatedTags = (b.tags || []).map((t) => t.name).filter((n) => n !== delName);
       try {
-        await api(`/api/bookmarks/${id}`, {
-          method: "PATCH",
-          body: JSON.stringify({ tags: updatedTags }),
-        });
+        await api(`/api/bookmarks/${id}`, { method: "PATCH", body: JSON.stringify({ tags: updatedTags }) });
         toast("Tag dilepas");
-        openDetail(id);
-      } catch {
-        toast("Gagal melepas tag");
-      }
+        bukaDetailSimpanan(id, ret);
+      } catch { toast("Gagal melepas tag"); }
     };
   });
-
-  // Catatan
   $("#detail-note-save").onclick = async () => {
-    const noteVal = $("#detail-note-input").value;
     try {
-      await api(`/api/bookmarks/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ note: noteVal }),
-      });
+      await api(`/api/bookmarks/${id}`, { method: "PATCH", body: JSON.stringify({ note: $("#detail-note-input").value }) });
       toast("Catatan disimpan");
-    } catch {
-      toast("Gagal menyimpan catatan");
-    }
+    } catch { toast("Gagal menyimpan catatan"); }
   };
 }
-
-/* Focus Mode & Mode Geser */
-async function openFocus() {
-  state.isSwipeMode = false;
-  state.swipeTitle = "";
-  showScreen("focus");
-  const wrap = $("#screen-focus");
-  wrap.innerHTML = `<div class="empty-state" style="color:#A9A9A9"><p>Menyiapkan Focus Mode...</p></div>`;
-
-  let items;
-  if (state.focusListId) {
-    const data = await apiJson(`/api/lists/${state.focusListId}/bookmarks?limit=30`);
-    items = asArray(data, "bookmarks");
+function kembaliDariDetail() {
+  const ret = state.detailReturn || { view: "koleksi" };
+  if (ret.view === "detail-koleksi" && ret.listId) {
+    bukaDetailKoleksi(ret.listId, true);
+  } else if (ret.view === "cari") {
+    go("cari");
+  } else if (ret.view === "kantong") {
+    go("kantong");
+  } else if (ret.view === "arsip") {
+    bukaArsip();
   } else {
-    const data = await apiJson("/api/bookmarks?limit=15");
-    items = asArray(data, "bookmarks");
+    go("koleksi");
   }
-  state.focusQueue = items;
-  state.focusIndex = 0;
-  renderFocusCard();
 }
 
-function renderFocusCard() {
-  const wrap = $("#screen-focus");
-  const q = state.focusQueue;
-
-  if (state.focusIndex >= q.length || q.length === 0) {
-    wrap.innerHTML = `
-      <div class="focus-done-wrap">
-        ${ICONS.mascot}
-        <h2>Selesai ditinjau</h2>
-        <p>${state.isSwipeMode ? "Kamu sudah melihat semua simpanan di koleksi ini." : "Semua simpanan di antrean ini sudah kamu lihat. Kerja bagus."}</p>
-        <button class="btn-primary" id="focus-done" style="max-width:280px;margin-top:16px">
-          ${state.isSwipeMode ? "Kembali ke Koleksi" : "Kembali ke Beranda"}
-        </button>
-      </div>`;
-    $("#focus-done").onclick = () => {
-      if (state.isSwipeMode && state.currentListId) openCollection(state.currentListId);
-      else { showScreen("home"); loadHome(); }
-    };
+/* Cari: satu kotak, kata kunci dan hasil bertahan saat kembali */
+let cariDebounce = null;
+async function muatCariAwal() {
+  const input = $("#cari-input");
+  if (input.value !== state.searchQ) input.value = state.searchQ;
+  if (state.searchResults.length > 0 || state.searchQ || state.searchTag) {
+    renderCariHasil();
     return;
   }
-
-  const b = q[state.focusIndex];
-  const c = b.content || {};
-  const img = cardImage(b);
-  const segs = q.map((_, i) => `<i class="${i <= state.focusIndex ? "done" : ""}"></i>`).join("");
-  const tags = (b.tags || []).slice(0, 3).map((t, i) =>
-    `<span class="price-tag" style="background:${TAG_COLORS[i % TAG_COLORS.length]}"><span class="price-tag-hole"></span><span class="price-tag-name">#${esc(t.name)}</span></span>`
-  ).join("");
-
-  const label = state.isSwipeMode ? esc(state.swipeTitle.toUpperCase()) : "SIMPANAN BARU";
-  const descClean = deskripsiBersih(b);
-
-  wrap.innerHTML = `
-    <header class="focus-top">
-      <strong class="focus-label">${label}</strong>
-      <span class="focus-count">${String(state.focusIndex + 1).padStart(2, "0")}/${String(q.length).padStart(2, "0")}</span>
-    </header>
-
-    ${!state.isSwipeMode ? `<div class="focus-progress">${segs}</div>` : ""}
-
-    <div class="focus-center-wrap">
-      <div class="focus-card">
-        <p class="focus-card-source">${esc(cardSource(b))}</p>
-        ${img ? `<div class="focus-card-photo"><img src="${esc(img)}" alt=""></div>` : ""}
-        <h3 class="focus-card-title">${esc(judulBersih(b))}</h3>
-        ${descClean ? `<p class="focus-card-desc">${esc(descClean.slice(0, 160))}</p>` : ""}
-        ${tags ? `<div class="tag-cloud" style="margin-top:10px;margin-bottom:0">${tags}</div>` : ""}
-      </div>
-
-      <div class="focus-actions">
-        <button class="btn-circle-action" id="focus-prev" ${state.focusIndex === 0 ? "disabled" : ""} aria-label="Sebelumnya">
-          ${ICONS.arrowLeft}
-        </button>
-        ${c.type === "link"
-          ? `<button class="btn-primary" id="focus-open">Buka link</button>`
-          : `<button class="btn-primary" id="focus-open">Lihat detail</button>`}
-        <button class="btn-circle-action" id="focus-next" aria-label="Berikutnya">
-          ${ICONS.arrowRight}
-        </button>
-      </div>
-    </div>`;
-
-  $("#focus-prev").onclick = () => {
-    if (state.focusIndex > 0) {
-      state.focusIndex--;
-      renderFocusCard();
-    }
-  };
-
-  $("#focus-next").onclick = async () => {
-    await keluarAntrean(b);
-    pindahKeKategoriBilaYatim(b);
-    state.focusIndex++;
-    renderFocusCard();
-  };
-
-  $("#focus-open").onclick = async () => {
-    if (c.type === "link") window.open(c.url, "_blank");
-    else openDetail(b.id);
-
-    await keluarAntrean(b);
-    pindahKeKategoriBilaYatim(b);
-    state.focusIndex++;
-    renderFocusCard();
-  };
-}
-
-/* Acara Global */
-function bindEvents() {
-  $("#login-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const r = await fetch("/auth/login", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: $("#login-username").value, password: $("#login-password").value }),
-    });
-    if (r.ok) { showScreen("home"); loadHome(); }
-    else { const el = $("#login-error"); el.hidden = false; el.textContent = "Username atau password salah."; }
-  });
-
-  document.querySelectorAll("[data-nav]").forEach((el) =>
-    el.addEventListener("click", () => {
-      const target = el.dataset.nav;
-      showScreen(target);
-      if (target === "home") loadHome();
-    }));
-
-  $("#btn-home-see-library").addEventListener("click", () => { showScreen("library"); loadLibrary(); segarkanLabelArsip(); });
-  $("#btn-open-archive").addEventListener("click", openArchive);
-  $("#btn-search").addEventListener("click", openSearch);
-  $("#btn-search-cancel").addEventListener("click", () => { showScreen("home"); loadHome(); });
-
-  $("#search-input").addEventListener("input", (e) => {
-    clearTimeout(searchDebounce);
-    searchDebounce = setTimeout(() => runSearch(e.target.value), 220);
-  });
-
-  $("#btn-settings").addEventListener("click", async () => {
-    showScreen("settings");
-    try {
-      const h = await apiJson("/api/health");
-      $("#server-status").textContent = h.karakeep ? "Terhubung ke Karakeep" : "Karakeep tidak terjangkau";
-    } catch {
-      $("#server-status").textContent = "Tidak terjangkau";
-    }
-  });
-
-  $("#btn-focus").addEventListener("click", openFocus);
-  $("#btn-load-more").addEventListener("click", () => loadLibrary(false));
-  $("#btn-logout").addEventListener("click", async () => { await fetch("/auth/logout", { method: "POST" }); showLogin(); });
-
-  $("#quick-save-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const url = $("#quick-save-input").value.trim();
-    if (!url) return;
-    const r = await api("/api/bookmarks", { method: "POST", body: JSON.stringify({ type: "link", url }) });
-    if (r.ok) {
-      const created = await r.json().catch(() => null);
-      await masukBelumDibuka(created && (created.id || created.bookmark?.id));
-      $("#quick-save-input").value = ""; toast("Tersimpan, sedang diproses"); loadHome();
-    }
-    else toast("Gagal menyimpan, periksa link-nya");
-  });
-
-  // Tombol buat koleksi baru -> Buka Sheet Koleksi Baru
-  $("#btn-new-collection").addEventListener("click", () => {
-    openCollectionSheet(null);
-  });
-}
-
-/* Susun layar login mengikuti konfigurasi server: tombol Google dan form
-   password hanya tampil bila masing-masing aktif di .env */
-async function aturLayarLogin() {
   try {
-    const cfg = await (await fetch("/auth/config")).json();
-    if (!cfg.google) { $("#btn-google-login").hidden = true; $("#login-divider").hidden = true; }
-    if (!cfg.password_login) { $("#login-form").hidden = true; $("#login-divider").hidden = true; }
-  } catch { /* abaikan: tampilkan semua pilihan */ }
+    const tagsData = await apiJson("/api/tags");
+    state.tags = asArray(tagsData, "tags");
+  } catch { state.tags = []; }
+  renderCariChips();
+  $("#cari-hasil").innerHTML = `<div class="empty-state"><p>Ketik kata kunci atau pilih tag untuk mulai mencari.</p></div>`;
 }
+function renderCariChips() {
+  const wrap = $("#cari-chips");
+  wrap.innerHTML = `<div class="chip-row">${state.tags.slice(0, 20).map((t) =>
+    `<button class="fchip ${state.searchTag === t.name ? "active" : ""}" type="button" data-chip-tag="${esc(t.name)}" data-chip-id="${esc(t.id)}">#${esc(t.name)}</button>`).join("")}</div>`;
+  wrap.querySelectorAll("[data-chip-tag]").forEach((btn) => {
+    btn.onclick = () => {
+      if (state.searchTag === btn.dataset.chipTag) {
+        state.searchTag = null; state.searchTagId = null;
+      } else {
+        state.searchTag = btn.dataset.chipTag; state.searchTagId = btn.dataset.chipId;
+      }
+      jalankanCari();
+    };
+  });
+}
+async function jalankanCari() {
+  const q = state.searchQ;
+  const wrap = $("#cari-hasil");
+  renderCariChips();
+  if (!q.trim() && !state.searchTag) {
+    state.searchResults = [];
+    wrap.innerHTML = `<div class="empty-state"><p>Ketik kata kunci atau pilih tag untuk mulai mencari.</p></div>`;
+    return;
+  }
+  wrap.innerHTML = `<div class="empty-state"><p>Mencari...</p></div>`;
+  try {
+    let items = [];
+    if (!q.trim() && state.searchTagId) {
+      const data = await apiJson(`/api/tags/${state.searchTagId}/bookmarks?limit=24`);
+      items = asArray(data, "bookmarks");
+    } else {
+      const data = await apiJson("/api/bookmarks/search?q=" + encodeURIComponent(q) + "&limit=24");
+      items = asArray(data, "bookmarks");
+      if (state.searchTag) {
+        items = items.filter((b) => (b.tags || []).some((t) => t.name === state.searchTag));
+      }
+    }
+    state.searchResults = items;
+    renderCariHasil();
+  } catch {
+    wrap.innerHTML = `<div class="empty-state"><p>Gagal mencari. Periksa koneksimu, lalu coba lagi.</p></div>`;
+  }
+}
+function renderCariHasil() {
+  const wrap = $("#cari-hasil");
+  renderCariChips();
+  const items = state.searchResults;
+  wrap.innerHTML = items.map((b) => miniCard(b)).join("") || `
+    <div class="empty-state"><p>Tidak ada hasil untuk "${esc(state.searchQ)}".</p></div>`;
+  bindMiniCards(wrap, "cari");
+}
+$("#cari-input").addEventListener("input", (e) => {
+  state.searchQ = e.target.value;
+  clearTimeout(cariDebounce);
+  cariDebounce = setTimeout(jalankanCari, 220);
+});
+
+/* Tambah: tiga jenis, semua lewat endpoint gabungan, semua ke Kantong */
+$("#form-tambah-link").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const url = $("#tambah-link-url").value.trim();
+  if (!url) return;
+  try {
+    await api("/api/capture", { method: "POST", body: JSON.stringify({ url }) });
+    $("#tambah-link-url").value = "";
+    toast("Tersimpan ke Kantong");
+    muatKantong();
+  } catch { toast("Gagal menyimpan, periksa link-nya"); }
+});
+$("#form-tambah-catatan").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const text = $("#tambah-catatan-teks").value.trim();
+  if (!text) return;
+  try {
+    await api("/api/capture", { method: "POST", body: JSON.stringify({ text }) });
+    $("#tambah-catatan-teks").value = "";
+    toast("Tersimpan ke Kantong");
+    muatKantong();
+  } catch { toast("Gagal menyimpan catatan"); }
+});
+$("#form-tambah-gambar").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const fileInput = $("#tambah-gambar-file");
+  if (!fileInput.files || fileInput.files.length === 0) return;
+  const form = new FormData();
+  form.append("file", fileInput.files[0]);
+  try {
+    const r = await fetch("/api/capture", { method: "POST", body: form });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    fileInput.value = "";
+    toast("Tersimpan ke Kantong");
+    muatKantong();
+  } catch { toast("Gagal menyimpan gambar"); }
+});
+
+/* Arsip: di luar Beresin Kantong */
+async function bukaArsip() {
+  state.detailReturn = { view: "koleksi" };
+  go("arsip");
+  const wrap = $("#arsip-items");
+  wrap.innerHTML = `<div class="empty-state"><p>Memuat arsip...</p></div>`;
+  try {
+    const data = await apiJson("/api/bookmarks?archived=true&limit=50");
+    const items = asArray(data, "bookmarks");
+    wrap.innerHTML = items.map((b) => miniCard(b)).join("") || `
+      <div class="empty-state"><p>Belum ada simpanan yang diarsipkan.</p></div>`;
+    bindMiniCards(wrap, "arsip");
+  } catch {
+    wrap.innerHTML = `<div class="empty-state"><p>Gagal memuat arsip.</p></div>`;
+  }
+}
+$("#btn-open-arsip").addEventListener("click", bukaArsip);
+$("#arsip-back").addEventListener("click", () => go("koleksi"));
+$("#btn-beresin").addEventListener("click", bukaBeresin);
+document.querySelectorAll(".navbtn").forEach((el) =>
+  el.addEventListener("click", () => go(el.dataset.view)));
+
+/* Atur: grup baris Akun, Preferensi, Data, Terhubung, Bantuan, Admin */
+async function muatAtur() {
+  const wrap = $("#atur-groups");
+  const me = state.me;
+  if (!me) return;
+  const isAdmin = me.is_admin;
+  let devicesHtml = `<p style="font-size:13px;color:var(--muted)">Memuat perangkat...</p>`;
+  let adminHtml = "";
+  wrap.innerHTML = `
+    <div class="set-group">
+      <h2 class="set-group-title">Akun</h2>
+      <button class="set-row" type="button" id="atur-profil">
+        ${me.picture ? `<img src="${esc(me.picture)}" alt="" style="width:32px;height:32px;object-fit:cover;border:2px solid var(--line);border-radius:8px;flex:none">` : `<span class="set-ic">${icon("pencil")}</span>`}
+        <span>${esc(me.name)}</span>
+        <span class="set-val">${me.role === "owner" ? "Admin" : "Anggota"} · ${esc(me.email)}</span>
+        <span class="chev">›</span>
+      </button>
+      <button class="set-row" type="button" id="atur-perangkat">
+        <span class="set-ic">${icon("link")}</span>
+        <span>Perangkat dan Pairing</span>
+        <span class="set-val">Shortcut dan PWA</span>
+        <span class="chev">›</span>
+      </button>
+      <div id="atur-perangkat-list" hidden>${devicesHtml}</div>
+    </div>
+    <div class="set-group">
+      <h2 class="set-group-title">Preferensi</h2>
+      <div class="set-row" style="cursor:default">
+        <span class="set-ic">${icon("refresh")}</span>
+        <span>Tema</span>
+        <span class="theme-switch">
+          <button type="button" data-theme-choice="light" aria-label="Tema terang">☀</button>
+          <button type="button" data-theme-choice="dark" aria-label="Tema gelap">☾</button>
+        </span>
+      </div>
+      ${isAdmin ? `
+      <div class="set-row" style="cursor:default">
+        <span class="set-ic">${icon("archive")}</span>
+        <span>Pengingat Telegram</span>
+        <label class="switch">
+          <input type="checkbox" id="switch-pengingat" ${me.reminder_enabled ? "checked" : ""}>
+          <span class="switch-track"></span>
+        </label>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin:-4px 0 0">Default nonaktif. Pengingat hanya untuk pemilik, soal Kantong yang belum diproses.</p>` : ""}
+    </div>
+    <div class="set-group">
+      <h2 class="set-group-title">Data</h2>
+      <button class="set-row" type="button" id="atur-impor">
+        <span class="set-ic">${icon("upload")}</span>
+        <span>Impor Simpanan</span>
+        <span class="chev">›</span>
+      </button>
+      <button class="set-row" type="button" id="atur-ekspor">
+        <span class="set-ic">${icon("download")}</span>
+        <span>Ekspor dan Cadangan</span>
+        <span class="chev">›</span>
+      </button>
+      ${isAdmin ? `
+      <button class="set-row" type="button" id="atur-segarkan-tag">
+        <span class="set-ic">${icon("refresh")}</span>
+        <span>Segarkan Tag AI</span>
+        <span class="set-val">Pemicu massal</span>
+        <span class="chev">›</span>
+      </button>` : ""}
+    </div>
+    <div class="set-group">
+      <h2 class="set-group-title">Terhubung</h2>
+      <button class="set-row" type="button" id="atur-affiliate">
+        <span class="set-ic">${icon("link")}</span>
+        <span>Affiliate OS</span>
+        <span class="set-val">Persiapan</span>
+        <span class="chev">›</span>
+      </button>
+    </div>
+    <div class="set-group">
+      <h2 class="set-group-title">Bantuan</h2>
+      <button class="set-row" type="button" id="atur-tentang">
+        <span class="set-ic ic-cream">${icon("note")}</span>
+        <span>Tentang Pocil</span>
+        <span class="chev">›</span>
+      </button>
+      <button class="set-row" type="button" id="atur-privasi">
+        <span class="set-ic ic-cream">${icon("note")}</span>
+        <span>Kebijakan Privasi</span>
+        <span class="chev">›</span>
+      </button>
+    </div>
+    ${isAdmin ? `<div class="set-group" id="atur-admin-group">
+      <h2 class="set-group-title">Admin</h2>
+      <button class="set-row" type="button" id="atur-undang">
+        <span class="set-ic">${icon("group")}</span>
+        <span>Undang Anggota</span>
+        <span class="chev">›</span>
+      </button>
+      <div id="atur-anggota-list"><p style="font-size:13px;color:var(--muted)">Memuat anggota...</p></div>
+    </div>` : ""}
+    <p style="font-size:12px;color:var(--muted)">Status mesin: ${me.karakeep_connected ? "terhubung" : "belum terhubung, periksa kunci di server"}</p>`;
+  terapkanTema(localStorage.getItem("pocil-theme") || "system");
+  wrap.querySelectorAll(".theme-switch button").forEach((b) =>
+    b.addEventListener("click", () => {
+      localStorage.setItem("pocil-theme", b.dataset.themeChoice);
+      terapkanTema(b.dataset.themeChoice);
+    }));
+  const switchPengingat = wrap.querySelector("#switch-pengingat");
+  if (switchPengingat) {
+    switchPengingat.addEventListener("change", async () => {
+      const enabled = switchPengingat.checked;
+      try {
+        const updated = await apiJson("/api/me/reminder", {
+          method: "PATCH", body: JSON.stringify({ enabled }),
+        });
+        state.me = updated;
+        toast(enabled ? "Pengingat diaktifkan" : "Pengingat dinonaktifkan");
+      } catch (e) {
+        switchPengingat.checked = false;
+        toast("Akun Telegram belum terhubung, hubungkan dulu sebelum menyalakan pengingat");
+      }
+    });
+  }
+  wrap.querySelector("#atur-profil").onclick = () => {
+    const html = `
+      <form id="form-profil">
+        <div class="sheet-form-group">
+          <label class="sheet-label" for="input-profil-nama">Nama tampilan</label>
+          <input class="input" id="input-profil-nama" type="text" maxlength="80" value="${esc(me.name)}" required autocomplete="off">
+        </div>
+        <div class="sheet-form-group">
+          <label class="sheet-label" for="input-profil-foto">Foto (opsional, maks 256 KB)</label>
+          <input class="input-file" id="input-profil-foto" type="file" accept="image/*">
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%">Simpan Profil</button>
+      </form>`;
+    bukaLembar("Profil", html, (body) => {
+      body.querySelector("#form-profil").onsubmit = async (e) => {
+        e.preventDefault();
+        const name = body.querySelector("#input-profil-nama").value.trim();
+        const fileInput = body.querySelector("#input-profil-foto");
+        const payload = { name };
+        if (fileInput.files && fileInput.files.length > 0) {
+          const file = fileInput.files[0];
+          if (file.size > 256000) { toast("Foto terlalu besar, maks 256 KB"); return; }
+          payload.picture = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.readAsDataURL(file);
+          });
+        }
+        try {
+          const updated = await apiJson("/api/me", { method: "PATCH", body: JSON.stringify(payload) });
+          state.me = updated;
+          toast("Profil disimpan");
+          tutupLembar();
+          muatAtur();
+        } catch { toast("Gagal menyimpan profil"); }
+      };
+    });
+  };
+  wrap.querySelector("#atur-perangkat").onclick = async () => {
+    const listWrap = wrap.querySelector("#atur-perangkat-list");
+    listWrap.hidden = !listWrap.hidden;
+    if (listWrap.hidden) return;
+    listWrap.innerHTML = `<p style="font-size:13px;color:var(--muted)">Memuat perangkat...</p>`;
+    try {
+      const data = await apiJson("/api/devices");
+      const devices = asArray(data, "devices");
+      listWrap.innerHTML = `
+        <div style="margin-bottom:12px">
+          ${devices.map((d) => `
+            <div class="device-row" style="margin-bottom:10px">
+              <div style="flex:1">
+                <span class="dev-name">${esc(d.device_name)}</span>
+                <span class="dev-meta">${d.revoked_at ? "dicabut" : "aktif"}${d.last_used_at ? " · terakhir dipakai " + esc(timeAgo(d.last_used_at)) : ""}</span>
+              </div>
+              ${d.revoked_at ? "" : `<button class="btn-small" type="button" data-cabut="${esc(d.id)}">Cabut</button>`}
+            </div>`).join("") || `<p style="font-size:13px;color:var(--muted)">Belum ada perangkat terpairing.</p>`}
+        </div>
+        <button class="btn-primary" type="button" id="btn-tambah-perangkat" style="width:100%">Tambah Perangkat</button>
+        <p style="font-size:12px;color:var(--muted)">Satu akun bisa punya beberapa perangkat. Token tiap perangkat bisa dicabut satu per satu dari sini.</p>`;
+      listWrap.querySelectorAll("[data-cabut]").forEach((btn) => {
+        btn.onclick = async () => {
+          try {
+            await api(`/api/devices/${btn.dataset.cabut}`, { method: "DELETE" });
+            toast("Perangkat dicabut, tokennya tidak bisa lagi mengirim");
+            wrap.querySelector("#atur-perangkat").click();
+            wrap.querySelector("#atur-perangkat").click();
+          } catch { toast("Gagal mencabut perangkat"); }
+        };
+      });
+      listWrap.querySelector("#btn-tambah-perangkat").onclick = () => {
+        const html = `
+          <form id="form-pairing">
+            <div class="sheet-form-group">
+              <label class="sheet-label" for="input-nama-perangkat">Nama perangkat</label>
+              <input class="input" id="input-nama-perangkat" type="text" placeholder="misal: iPhone Azzam" required autocomplete="off">
+            </div>
+            <button type="submit" class="btn-primary" style="width:100%">Minta Kode Pairing</button>
+          </form>
+          <div id="pairing-hasil" hidden>
+            <p style="font-size:13px;margin:14px 0 0">Masukkan kode ini ke Shortcut sekali saja. Shortcut menyimpan tokennya sendiri, kamu tidak pernah mengetik token.</p>
+            <div class="pairing-code" id="pairing-kode"></div>
+            <p style="font-size:12px;color:var(--muted)">Kode berlaku 10 menit dan hanya bisa dipakai sekali.</p>
+          </div>`;
+        bukaLembar("Tambah Perangkat", html, (body) => {
+          body.querySelector("#form-pairing").onsubmit = async (e) => {
+            e.preventDefault();
+            const deviceName = body.querySelector("#input-nama-perangkat").value.trim();
+            if (!deviceName) return;
+            try {
+              const data = await apiJson("/api/pairing/code", {
+                method: "POST", body: JSON.stringify({ device_name: deviceName }),
+              });
+              body.querySelector("#pairing-kode").textContent = data.code;
+              body.querySelector("#pairing-hasil").hidden = false;
+            } catch { toast("Gagal meminta kode pairing"); }
+          };
+        });
+      };
+    } catch {
+      listWrap.innerHTML = `<p style="font-size:13px;color:var(--muted)">Gagal memuat perangkat.</p>`;
+    }
+  };
+  wrap.querySelector("#atur-impor").onclick = () => {
+    const html = `
+      <form id="form-impor">
+        <div class="sheet-form-group">
+          <label class="sheet-label" for="input-impor-file">Berkas ekspor JSON Pocil</label>
+          <input class="input-file" id="input-impor-file" type="file" accept="application/json" required>
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%">Impor</button>
+      </form>
+      <p style="font-size:12px;color:var(--muted)">Impor membuat simpanan tautan dan catatan baru di Kantong. Gambar di dalam berkas dilewati.</p>`;
+    bukaLembar("Impor Simpanan", html, (body) => {
+      body.querySelector("#form-impor").onsubmit = async (e) => {
+        e.preventDefault();
+        const fileInput = body.querySelector("#input-impor-file");
+        if (!fileInput.files || fileInput.files.length === 0) return;
+        try {
+          const text = await fileInput.files[0].text();
+          const parsed = JSON.parse(text);
+          const list = Array.isArray(parsed) ? parsed : (parsed.bookmarks || []);
+          let dibuat = 0, dilewati = 0;
+          for (const item of list) {
+            const url = item.url || item.content?.url;
+            const teks = item.text || item.content?.text;
+            try {
+              if (url) { await api("/api/capture", { method: "POST", body: JSON.stringify({ url }) }); dibuat += 1; }
+              else if (teks) { await api("/api/capture", { method: "POST", body: JSON.stringify({ text: teks }) }); dibuat += 1; }
+              else { dilewati += 1; }
+            } catch { dilewati += 1; }
+          }
+          tutupLembar();
+          toast(`Impor selesai: ${dibuat} dibuat, ${dilewati} dilewati`);
+          muatKantong();
+        } catch { toast("Berkas tidak bisa dibaca sebagai JSON"); }
+      };
+    });
+  };
+  wrap.querySelector("#atur-ekspor").onclick = async () => {
+    try {
+      let items = [];
+      let cursor = null;
+      for (let page = 0; page < 50; page += 1) {
+        const q = "/api/bookmarks?limit=100" + (cursor ? "&cursor=" + encodeURIComponent(cursor) : "");
+        const data = await apiJson(q);
+        items = items.concat(asArray(data, "bookmarks"));
+        cursor = data.nextCursor || null;
+        if (!cursor) break;
+      }
+      const blob = new Blob([JSON.stringify({ exported_at: new Date().toISOString(), bookmarks: items }, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "pocil-ekspor.json";
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast("Ekspor diunduh");
+    } catch { toast("Gagal mengekspor"); }
+  };
+  const segarkanBtn = wrap.querySelector("#atur-segarkan-tag");
+  if (segarkanBtn) {
+    segarkanBtn.onclick = async () => {
+      try {
+        await apiJson("/api/admin/retrigger-inference", {
+          method: "POST", body: JSON.stringify({ status: "all" }),
+        });
+        toast("Penandaan ulang dipicu, tag muncul bertahap sesudah proses latar selesai");
+      } catch { toast("Gagal memicu penandaan ulang"); }
+    };
+  }
+  wrap.querySelector("#atur-affiliate").onclick = () => {
+    bukaLembar("Affiliate OS", `
+      <p style="font-size:14px;line-height:1.6">Jembatan ke Affiliate OS masih persiapan di rilis ini. Belum ada integrasi yang bekerja dari menu ini.</p>`);
+  };
+  wrap.querySelector("#atur-tentang").onclick = () => {
+    bukaLembar("Tentang Pocil", `
+      <p style="font-size:14px;line-height:1.6">Pocil adalah kantong simpanan pribadi di homelab. Semua simpanan baru mendarat di Kantong, lalu kamu pilihkan satu koleksi lewat Beresin Kantong. Mesin penyimpanan di belakang layar adalah Karakeep, tetapi kamu tidak pernah melihat antarmukanya.</p>
+      <p style="font-size:13px;color:var(--muted)">Versi reset 24 Okt 2026.</p>`);
+  };
+  wrap.querySelector("#atur-privasi").onclick = () => {
+    bukaLembar("Kebijakan Privasi", `
+      <p style="font-size:14px;line-height:1.6">Data simpanan tinggal di server homelab pemilik, bukan di layanan pihak ketiga. Login Google hanya dipakai untuk mengenali email kamu; Pocil tidak membaca email atau data Google lainnya. Token perangkat hanya hidup di perangkat itu dan bisa dicabut kapan saja dari Pengaturan.</p>`);
+  };
+  if (isAdmin) {
+    const anggotaWrap = wrap.querySelector("#atur-anggota-list");
+    try {
+      const data = await apiJson("/api/admin/members");
+      const members = asArray(data, "members");
+      const invitations = asArray(data, "invitations");
+      const pending = invitations.filter((i) => i.status === "pending");
+      anggotaWrap.innerHTML = `
+        ${members.map((m) => `
+          <div class="device-row" style="margin-bottom:10px">
+            <div style="flex:1">
+              <span class="dev-name">${esc(m.name)}</span>
+              <span class="dev-meta">${esc(m.email)} · ${m.role === "owner" ? "Admin" : "Anggota"}</span>
+            </div>
+          </div>`).join("")}
+        ${pending.map((i) => `
+          <div class="device-row" style="margin-bottom:10px">
+            <div style="flex:1">
+              <span class="dev-name">${esc(i.email)}</span>
+              <span class="dev-meta">Undangan menunggu</span>
+            </div>
+            <button class="btn-small" type="button" data-cabut-undangan="${esc(i.id)}">Cabut</button>
+          </div>`).join("")}`;
+      anggotaWrap.querySelectorAll("[data-cabut-undangan]").forEach((btn) => {
+        btn.onclick = async () => {
+          try {
+            await api(`/api/invitations/${btn.dataset.cabutUndangan}`, { method: "DELETE" });
+            toast("Undangan dicabut");
+            muatAtur();
+          } catch { toast("Gagal mencabut undangan"); }
+        };
+      });
+    } catch {
+      anggotaWrap.innerHTML = `<p style="font-size:13px;color:var(--muted)">Gagal memuat anggota.</p>`;
+    }
+    wrap.querySelector("#atur-undang").onclick = () => {
+      const html = `
+        <form id="form-undang-anggota">
+          <div class="sheet-form-group">
+            <label class="sheet-label" for="input-undang-anggota">Email anggota baru</label>
+            <input class="input" id="input-undang-anggota" type="email" placeholder="nama@email.com" required autocomplete="off">
+          </div>
+          <button type="submit" class="btn-primary" style="width:100%">Undang</button>
+        </form>
+        <p style="font-size:12px;color:var(--muted)">Undangan email adalah satu-satunya jalan masuk anggota. Sesudah diundang, anggota masuk lewat Google dan akun mesinnya dibuat otomatis.</p>`;
+      bukaLembar("Undang Anggota", html, (body) => {
+        body.querySelector("#form-undang-anggota").onsubmit = async (e) => {
+          e.preventDefault();
+          const email = body.querySelector("#input-undang-anggota").value.trim();
+          if (!email) return;
+          try {
+            await api("/api/invitations", { method: "POST", body: JSON.stringify({ email }) });
+            toast("Undangan dibuat, anggota bisa masuk lewat Google");
+            tutupLembar();
+            muatAtur();
+          } catch { toast("Gagal mengundang, periksa emailnya"); }
+        };
+      });
+    };
+  }
+}
+
+/* Keluar */
+$("#btn-logout").addEventListener("click", async () => {
+  await fetch("/auth/logout", { method: "POST" }).catch(() => {});
+  tampilkanLogin();
+});
 
 /* Mulai */
 (async function init() {
-  initTheme();
-  bindEvents();
-  aturLayarLogin();
-  const err = new URLSearchParams(location.search).get("error");
+  initTema();
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  }
+  try {
+    const cfg = await (await fetch("/auth/config")).json();
+    if (!cfg.google) {
+      const btn = $("#btn-google-login");
+      btn.textContent = "Login Google belum disetel di server";
+      btn.style.pointerEvents = "none";
+      btn.style.opacity = "0.5";
+    }
+  } catch { /* abaikan */ }
+  const params = new URLSearchParams(location.search);
+  const err = params.get("error");
+  const viewParam = params.get("view");
+  if (err || viewParam) history.replaceState(null, "", location.pathname);
   if (err) {
-    history.replaceState(null, "", location.pathname);
     const el = $("#login-error");
     el.hidden = false;
-    el.textContent = err === "email-tidak-diizinkan"
-      ? "Email Google itu tidak terdaftar sebagai pemilik Poci."
+    el.textContent =
+      err === "email-tidak-diundang" ? "Email Google itu belum diundang ke Pocil."
+      : err === "provisioning-gagal" ? "Akun mesin gagal dibuat, minta admin mencoba lagi."
+      : err === "harus-masuk" ? "Masuk dulu sebelum berbagi dari aplikasi lain."
+      : err === "email-tidak-terverifikasi" ? "Email Google itu belum terverifikasi."
       : "Login Google gagal, coba lagi.";
   }
   try {
-    await apiJson("/auth/me");
-    showScreen("home");
-    loadHome();
+    state.me = await apiJson("/auth/me");
+    tampilkanApp();
+    await muatKantong();
+    if (viewParam === "kantong") {
+      go("kantong");
+      return;
+    }
+    if (!state.greeted && state.kantongCount > 0) {
+      state.greeted = true;
+      go("koleksi");
+      try {
+        const listsData = await apiJson("/api/lists");
+        state.lists = asArray(listsData, "lists");
+      } catch { /* antrean tetap bisa dibuka tanpa daftar */ }
+      bukaBeresin();
+    } else {
+      go("koleksi");
+    }
   } catch {
-    showLogin();
+    tampilkanLogin();
   }
 })();

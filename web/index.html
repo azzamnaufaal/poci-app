@@ -3,243 +3,162 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#FED264">
+<meta name="theme-color" content="#FFF6E9">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Poci - Kantong Simpanan</title>
+<title>Pocil - Kantong Simpanan</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
 
-<!-- Layar login -->
+<!-- Layar masuk: terpusat, logo saku, tagline kata berputar -->
 <section id="screen-login" class="screen">
-  <div class="login-box">
-    <div class="login-logo">Poci</div>
-    <p class="login-sub">Kantong simpananmu, dari server rumahmu sendiri.</p>
+  <div class="login-wrap">
+    <div class="login-hero">
+      <svg class="logo-anim" style="width:88px; height:auto;" viewBox="0 0 72 52" fill="none" aria-hidden="true"><g class="card-in"><rect x="27" y="2" width="18" height="20" rx="3" style="fill:var(--yellow)" stroke="currentColor" stroke-width="3"/><path d="M31 8.5h10M31 13.5h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g><path d="M14 14h44v16c0 11-10 19-22 19S14 41 14 30z" style="fill:var(--pink)" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M19 19.5h34" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3" stroke-linecap="round"/><circle cx="36" cy="41" r="2.6" style="fill:var(--yellow)" stroke="currentColor" stroke-width="2.5"/></svg>
+      <div class="logo-word" style="font-size:32px;">pocil</div>
+      <div class="small">Dari mana pun, <span class="rollmask"><span class="rolltrack"><span>tautan</span><span>screenshot</span><span>catatan</span><span>tautan</span></span></span> tersimpan rapi di sini.</div>
+    </div>
     <a class="btn-google" id="btn-google-login" href="/auth/google/login">Masuk dengan Google</a>
-    <div class="login-divider" id="login-divider"><span>atau masuk dengan password</span></div>
-    <form id="login-form">
-      <label>Username<input id="login-username" autocomplete="username" required></label>
-      <label>Password<input id="login-password" type="password" autocomplete="current-password" required></label>
-      <button class="btn-primary" type="submit">Masuk</button>
-      <p id="login-error" class="error-text" hidden></p>
-    </form>
+    <p class="login-note">Pocil khusus undangan. Hanya email yang sudah diundang yang bisa masuk.</p>
+    <p id="login-error" class="error-text" hidden></p>
   </div>
 </section>
 
-<!-- Kerangka aplikasi: satu layar tampil pada satu waktu, berpindah seperti tab -->
+<!-- Kerangka aplikasi: lima menu di bilah bawah, sublayar di atasnya -->
 <main id="app" hidden>
 
-  <section id="screen-home" class="screen app-screen">
-    <header class="home-top">
-      <button class="btn-square" id="btn-settings" aria-label="Pengaturan">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-          <circle cx="12" cy="12" r="3"/>
-        </svg>
-      </button>
-      <div class="home-top-right">
-        <button class="btn-square" id="btn-new-collection" aria-label="Koleksi baru">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/>
-            <line x1="12" y1="10" x2="12" y2="16"/>
-            <line x1="9" y1="13" x2="15" y2="13"/>
-          </svg>
-        </button>
-        <button class="btn-square" id="btn-search" aria-label="Cari">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"/>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-          </svg>
-        </button>
-      </div>
-    </header>
-    <h1 class="home-headline">Simpan sekarang.<br>Temukan kapan pun.</h1>
-    <form id="quick-save-form" class="quick-save">
-      <div class="quick-save-input-wrap">
-        <span class="quick-save-hash">#</span>
-        <input id="quick-save-input" type="url" inputmode="url" placeholder="Tempel link di sini...">
-      </div>
-      <button class="btn-plus" type="submit" aria-label="Simpan link">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"/>
-          <line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-      </button>
-    </form>
-    <button class="review-banner" id="btn-focus">
-      <span class="review-bell">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
-          <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
-        </svg>
-      </span>
-      <span class="review-text">
-        <strong id="review-count">0 simpanan baru</strong>
-        <span>menunggumu di Focus Mode</span>
-      </span>
-      <span class="review-cta">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="9 18 15 12 9 6"/>
-        </svg>
-      </span>
-    </button>
-    <div class="section-head">
-      <h2>Koleksiku</h2>
-      <button class="link-btn" id="btn-home-see-library">Lihat semua</button>
-    </div>
-    <div id="home-collections" class="folder-grid"></div>
-  </section>
-
-  <section id="screen-library" class="screen app-screen" hidden>
-    <header class="sub-top">
-      <button class="btn-square" data-nav="home" aria-label="Kembali">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="19" y1="12" x2="5" y2="12"/>
-          <polyline points="12 19 5 12 12 5"/>
-        </svg>
-      </button>
-      <h2>Perpustakaan</h2>
-    </header>
-    <div class="stats-panel" id="stats-panel"></div>
-    <button class="btn-secondary" id="btn-open-archive" style="width:100%;height:44px;margin-bottom:14px;font-size:14px">Arsip</button>
-    <div id="tag-cloud" class="tag-cloud"></div>
-    <div class="scroll-area">
-      <div id="library-items" class="item-grid"></div>
-      <button class="btn-loadmore" id="btn-load-more" hidden>Muat lagi</button>
+  <!-- Kantong: antrean belum berkategori -->
+  <section id="view-kantong" class="view" hidden>
+    <div class="view-pad">
+      <h1 class="page-title">Kantong</h1>
+      <p class="page-sub">Simpanan baru menunggu di sini sampai kamu pilihkan koleksinya.</p>
+      <button class="btn-primary" id="btn-beresin" type="button">Beresin Kantong</button>
+      <div id="kantong-items"></div>
     </div>
   </section>
 
-  <section id="screen-archive" class="screen app-screen" hidden>
-    <header class="sub-top">
-      <button class="btn-square" data-nav="library" aria-label="Kembali">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="19" y1="12" x2="5" y2="12"/>
-          <polyline points="12 19 5 12 12 5"/>
-        </svg>
-      </button>
-      <h2>Arsip</h2>
-    </header>
-    <div class="scroll-area">
-      <div class="section-head"><h2 id="archive-count">0 simpanan</h2></div>
-      <div id="archive-items" class="item-grid"></div>
+  <!-- Koleksi: Pustakaku dan Terakhir Disimpan -->
+  <section id="view-koleksi" class="view" hidden>
+    <div class="topbar" id="topbar-koleksi"></div>
+    <div class="view-pad">
+      <h1 class="page-title">Koleksi</h1>
+      <h2 class="sec-title">Pustakaku</h2>
+      <p class="hint">Tahan koleksi atau ketuk titik tiga untuk mengelola.</p>
+      <div id="pustaka-list"></div>
+      <h2 class="sec-title">Terakhir Disimpan</h2>
+      <div id="terakhir-list"></div>
+      <button class="row-btn" id="btn-open-arsip" type="button"><span>Arsip</span><span class="chev">›</span></button>
     </div>
   </section>
 
-  <section id="screen-search" class="screen app-screen" hidden>
-    <header class="search-top">
-      <div class="search-input-wrap">
-        <span class="search-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        </span>
-        <input id="search-input" type="search" placeholder="Cari koleksi atau simpanan..." autocomplete="off">
+  <!-- Tambah: tiga jenis simpanan, semua masuk Kantong -->
+  <section id="view-tambah" class="view" hidden>
+    <div class="topbar" id="topbar-tambah"></div>
+    <div class="view-pad">
+      <h1 class="page-title">Tambah</h1>
+      <div class="card">
+        <h2 class="card-title">Tautan</h2>
+        <form id="form-tambah-link">
+          <input class="input" id="tambah-link-url" type="url" inputmode="url" placeholder="https://..." required autocomplete="off">
+          <button class="btn-primary" type="submit">Simpan ke Kantong</button>
+        </form>
       </div>
-      <button class="link-btn search-cancel-btn" id="btn-search-cancel">Batal</button>
-    </header>
-    <div class="scroll-area">
-      <div id="search-initial" class="search-initial">
-        <div class="stats-panel search-stats-panel" id="search-stats-panel"></div>
-        <div class="section-head" style="margin-top:20px">
-          <h2>Terakhir Disimpan</h2>
-        </div>
-        <div id="search-recent-items" class="item-grid"></div>
-        <div class="section-head" style="margin-top:20px">
-          <h2>Tag Populer</h2>
-        </div>
-        <div id="search-popular-tags" class="tag-cloud"></div>
+      <div class="card">
+        <h2 class="card-title">Gambar</h2>
+        <form id="form-tambah-gambar">
+          <input class="input-file" id="tambah-gambar-file" type="file" accept="image/*" required>
+          <button class="btn-primary" type="submit">Simpan ke Kantong</button>
+        </form>
       </div>
-      <div id="search-results" class="item-grid" hidden></div>
+      <div class="card">
+        <h2 class="card-title">Catatan</h2>
+        <form id="form-tambah-catatan">
+          <textarea class="input" id="tambah-catatan-teks" rows="4" placeholder="Tulis catatan singkat..." required></textarea>
+          <button class="btn-primary" type="submit">Simpan ke Kantong</button>
+        </form>
+      </div>
     </div>
   </section>
 
-  <section id="screen-detail" class="screen app-screen" hidden></section>
-
-  <section id="screen-collection" class="screen app-screen" hidden>
-    <header class="sub-top collection-header">
-      <button class="btn-square" data-nav="home" aria-label="Kembali">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="19" y1="12" x2="5" y2="12"/>
-          <polyline points="12 19 5 12 12 5"/>
-        </svg>
-      </button>
-      <div class="collection-header-center">
-        <h2 id="collection-title">Koleksi</h2>
-        <span id="collection-count" class="collection-header-sub">0 item</span>
-      </div>
-      <div class="collection-header-actions">
-        <button class="btn-square btn-yellow" id="btn-collection-swipe" aria-label="Mode Geser">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2" y="7" width="16" height="14" rx="2"/>
-            <path d="M6 3h14a2 2 0 0 1 2 2v14"/>
-          </svg>
-        </button>
-        <button class="btn-square" id="btn-collection-menu" aria-label="Menu Koleksi">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
-          </svg>
-        </button>
-      </div>
-    </header>
-    <div class="scroll-area">
-      <div id="collection-items" class="item-grid"></div>
-    </div>
-    <div id="collection-select-bar" class="select-bar" hidden>
-      <button class="btn-secondary" id="btn-select-remove">Keluarkan</button>
-      <button class="btn-secondary btn-danger-text" id="btn-select-delete">Hapus</button>
-      <button class="btn-primary" id="btn-select-done">Selesai</button>
+  <!-- Cari: satu kotak, judul dan kolom ikut tergulir -->
+  <section id="view-cari" class="view" hidden>
+    <div class="topbar" id="topbar-cari"></div>
+    <div class="view-pad">
+      <h1 class="page-title">Cari</h1>
+      <input class="input input-cari" id="cari-input" type="search" placeholder="Cari judul, isi, atau tag..." autocomplete="off">
+      <div id="cari-chips"></div>
+      <div id="cari-hasil"></div>
     </div>
   </section>
 
-  <section id="screen-focus" class="screen focus-screen" hidden></section>
-
-  <section id="screen-settings" class="screen app-screen" hidden>
-    <header class="sub-top">
-      <button class="btn-square" data-nav="home" aria-label="Kembali">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="19" y1="12" x2="5" y2="12"/>
-          <polyline points="12 19 5 12 12 5"/>
-        </svg>
-      </button>
-      <h2>Pengaturan</h2>
-    </header>
-    <div class="scroll-area settings-list">
-      <div class="settings-card">
-        <div class="setting-row">
-          <span>Tampilan</span>
-          <div class="segmented" id="theme-segment">
-            <button data-theme-choice="system">Sistem</button>
-            <button data-theme-choice="light">Terang</button>
-            <button data-theme-choice="dark">Gelap</button>
-          </div>
-        </div>
-        <div class="setting-row"><span>Mesin</span><strong>Karakeep</strong></div>
-        <div class="setting-row"><span>Status server</span><strong id="server-status">Memeriksa...</strong></div>
-      </div>
-      <button class="btn-danger" id="btn-logout">Keluar</button>
+  <!-- Atur: grup baris mengikuti pola pengaturan -->
+  <section id="view-atur" class="view" hidden>
+    <div class="view-pad">
+      <h1 class="page-title">Atur</h1>
+      <div id="atur-groups"></div>
+      <button class="btn-secondary" id="btn-logout" type="button">Keluar</button>
     </div>
   </section>
 
+  <!-- Detail koleksi: saklar tiga tampilan di bawah kepala -->
+  <section id="view-detail-koleksi" class="view" hidden>
+    <div class="view-pad" id="detail-koleksi-wrap"></div>
+  </section>
+
+  <!-- Detail simpanan: satu baris empat ikon -->
+  <section id="view-detail-simpanan" class="view" hidden>
+    <div class="view-pad" id="detail-simpanan-wrap"></div>
+  </section>
+
+  <!-- Arsip: di luar Beresin Kantong -->
+  <section id="view-arsip" class="view" hidden>
+    <div class="view-pad">
+      <button class="btn-back" id="arsip-back" type="button">‹ Kembali</button>
+      <h1 class="page-title">Arsip</h1>
+      <div id="arsip-items"></div>
+    </div>
+  </section>
+
+  <!-- Bilah bawah lima menu -->
+  <nav id="bottomnav" aria-label="Menu utama">
+    <button class="navbtn" type="button" data-view="kantong"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 10V6a3 3 0 0 1 6 0v4"/></svg></span><span>Kantong</span><i class="nav-badge" data-badge hidden></i></button>
+    <button class="navbtn" type="button" data-view="koleksi"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg></span><span>Koleksi</span></button>
+    <button class="navbtn" type="button" data-view="tambah"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span><span>Tambah</span></button>
+    <button class="navbtn" type="button" data-view="cari"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span><span>Cari</span></button>
+    <button class="navbtn" type="button" data-view="atur"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg></span><span>Atur</span></button>
+  </nav>
 </main>
 
-<div id="bottom-sheet" class="sheet-backdrop" hidden>
-  <div class="sheet-panel">
-    <div class="sheet-handle"></div>
-    <header class="sheet-header">
-      <h3 class="sheet-title" id="sheet-title">Sheet</h3>
-      <button class="sheet-close" id="sheet-close" aria-label="Tutup">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </header>
-    <div class="sheet-body" id="sheet-body"></div>
+<!-- Beresin Kantong: layar penuh menutupi shell -->
+<section id="focuslay" hidden aria-label="Beresin Kantong">
+  <div class="focus-top">
+    <div class="focus-segs" id="focus-segs"></div>
+    <button class="focus-x" id="focus-x" type="button" aria-label="Keluar Beresin Kantong">✕</button>
+  </div>
+  <div class="focus-body" id="focus-body"></div>
+</section>
+
+<!-- Lembar bawah generik: kelola koleksi dan submenu -->
+<div id="sheet" hidden>
+  <div class="sheet-backdrop" id="sheet-backdrop"></div>
+  <div class="sheet-panel" role="dialog" aria-modal="true">
+    <div class="sheet-head">
+      <h2 id="sheet-title"></h2>
+      <button class="sheet-x" id="sheet-close" type="button" aria-label="Tutup">✕</button>
+    </div>
+    <div id="sheet-body"></div>
   </div>
 </div>
 
-<div id="toast" class="toast" hidden></div>
+<!-- Toast, pindah ke atas saat Beresin Kantong terbuka -->
+<div id="toast" hidden><span id="toast-text"></span><button id="toast-undo" type="button" hidden>Urungkan</button></div>
+
 <script src="/app.js"></script>
 </body>
 </html>
